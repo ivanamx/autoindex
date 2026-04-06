@@ -645,8 +645,26 @@
             min-width: 0;
         }
 
+        .plan-option-name-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+        }
+
         .plan-option-name {
             font-weight: 500;
+        }
+
+        .plan-option-badge {
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(251, 146, 60, 0.22);
+            color: #fdba74;
+            border: 1px solid rgba(251, 146, 60, 0.35);
         }
 
         .plan-option-price {
@@ -657,6 +675,13 @@
         .plan-option-save {
             font-size: 0.74rem;
             color: #86efac;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        .plan-option-perk {
+            font-size: 0.74rem;
+            color: #7dd3fc;
             margin-top: 4px;
             font-weight: 500;
         }
@@ -741,7 +766,7 @@
 <body class="has-public-topbar" data-open-register="{% if open_register == '1' %}1{% else %}0{% endif %}">
     {% if show_public_banner %}
     <header class="public-topbar" role="banner">
-        <span class="public-topbar-brand">AUTO SEARCH</span>
+        <span class="public-topbar-brand">AutoIndex</span>
         <nav class="public-topbar-nav" aria-label="Cuenta">
             <a href="{{ url_for('login') }}">Entrar</a>
             <span class="sep" aria-hidden="true">|</span>
@@ -750,7 +775,7 @@
     </header>
     {% else %}
     <header class="public-topbar" role="banner">
-        <span class="public-topbar-brand">AUTO SEARCH</span>
+        <span class="public-topbar-brand">AutoIndex</span>
         <nav class="public-topbar-nav" aria-label="Sesión">
             <a href="{{ url_for('dashboard') }}">Panel</a>
             <span class="sep" aria-hidden="true">|</span>
@@ -861,12 +886,16 @@
                             <span class="plan-option-body">
                                 <span class="plan-option-name">Mensual</span>
                                 <span class="plan-option-price">200&nbsp;MXN / mes</span>
+                                <span class="plan-option-perk">Cancela cuando quieras</span>
                             </span>
                         </label>
                         <label class="plan-option">
                             <input type="radio" name="plan" value="annual">
                             <span class="plan-option-body">
-                                <span class="plan-option-name">Anual</span>
+                                <span class="plan-option-name-row">
+                                    <span class="plan-option-name">Anual</span>
+                                    <span class="plan-option-badge">Más vendido</span>
+                                </span>
                                 <span class="plan-option-price">2,000&nbsp;MXN / año</span>
                                 <span class="plan-option-save">Ahorra 17%</span>
                             </span>

@@ -36,7 +36,7 @@ def inject_legal_context():
     wa_raw = (os.getenv('WHATSAPP_PHONE') or '').strip()
     wa_digits = re.sub(r'\D', '', wa_raw) if wa_raw else ''
     return {
-        'site_name': 'AUTO SEARCH',
+        'site_name': 'AutoIndex',
         'site_contact_email': email,
         'whatsapp_phone': wa_digits,
         'legal_last_updated_iso': '2026-04-07',
