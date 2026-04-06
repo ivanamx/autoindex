@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+npm-debug.log
+dist/
+
+# Env
+.env
+
+# PDFs (recomendado ignorarlos)
+pdfs/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Búsqueda NAGS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        html {
+            height: 100%;
+        }
+        
+        body {
+            background-color: #020617;
+            background-image:
+                radial-gradient(circle at top, rgba(15, 23, 42, 0.88), rgba(2, 6, 23, 0.94)),
+                url("{{ url_for('static', filename='images/index-bg.jpg') }}");
+            background-size: cover, cover;
+            background-position: center, center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            color: #e5e7eb;
+            min-height: 100%;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            padding: 16px 20px 10px;
+        }
+
+        body.has-public-topbar {
+            padding-top: 60px;
+        }
+
+        .page-main {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 0;
+            gap: 14px;
+        }
+
+        .public-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 0 18px;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            z-index: 100;
+        }
+
+        .public-topbar-brand {
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: 0.12em;
+            color: #38bdf8;
+            white-space: nowrap;
+        }
+
+        .public-topbar-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .public-topbar a {
+            color: rgba(255, 255, 255, 0.92);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .public-topbar a:hover {
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+        }
+
+        .public-topbar .sep {
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 0.75rem;
+            user-select: none;
+        }
+
+        .subscriber-greet {
+            width: 100%;
+            max-width: 600px;
+            margin: 0;
+            padding: 0 4px;
+            text-align: center;
+            font-family: 'Montserrat', sans-serif;
+            font-size: calc(1.12rem + 2pt);
+            font-weight: 500;
+            color: #cbd5e1;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+        
+        .container {
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 12px;
+            font-weight: 600;
+            font-size: 20px;
+            letter-spacing: 1px;
+            color: #38bdf8;
+        }
+
+        h2.page-title {
+            text-align: center;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 1.35rem;
+            color: #e5e7eb;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #9ca3af;
+            margin-bottom: 24px;
+            font-size: 0.9em;
+        }
+
+        .public-banner {
+            background: rgba(250, 204, 21, 0.08);
+            border: 1px solid rgba(250, 204, 21, 0.22);
+            color: #fde68a;
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 0.88em;
+            line-height: 1.45;
+            margin-bottom: 20px;
+        }
+
+        .public-banner a {
+            color: #38bdf8;
+            font-weight: 600;
+            text-decoration: underline;
+        }
+
+        .public-banner a:hover {
+            color: #7dd3fc;
+        }
+        
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        #searchInput {
+            width: 100%;
+            padding: 12px 50px 12px 14px;
+            font-size: 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            color: #fff;
+            outline: none;
+            transition: 0.2s;
+        }
+        
+        #searchInput::placeholder {
+            color: #6b7280;
+        }
+        
+        #searchInput:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+        
+        .voice-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            border: none;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        
+        .voice-btn:hover {
+            transform: translateY(-50%) scale(1.05);
+            box-shadow: 0 8px 20px rgba(56, 189, 248, 0.35);
+        }
+        
+        .voice-btn.listening {
+            background: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.08); }
+        }
+        
+        .voice-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: white;
+        }
+        
+        .search-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        
+        .search-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(56, 189, 248, 0.3);
+        }
+        
+        .search-btn:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: #6b7280;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 10px;
+            display: none;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .result.success {
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.28);
+            color: #86efac;
+        }
+        
+        .result.error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.2);
+            color: #fecaca;
+        }
+        
+        .result.info {
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.22);
+            color: #bae6fd;
+        }
+
+        .result .btn-catalogo {
+            margin-top: 12px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            font-family: inherit;
+            transition: 0.2s;
+        }
+
+        .result .btn-catalogo:hover {
+            box-shadow: 0 8px 20px rgba(56, 189, 248, 0.35);
+        }
+
+        .result-success-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        @media (min-width: 769px) {
+            .result.success .result-success-layout {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                gap: 20px;
+            }
+
+            .result.success .result-success-main {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .result.success .btn-catalogo {
+                margin-top: 0;
+                flex-shrink: 0;
+            }
+        }
+        
+        .loader {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .loader.active {
+            display: block;
+        }
+        
+        .loader p {
+            margin-top: 10px;
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.08);
+            border-top: 3px solid #38bdf8;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .example {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            font-size: 0.88em;
+            color: #9ca3af;
+        }
+        
+        .example strong {
+            color: #e5e7eb;
+        }
+
+        .page-footer {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .site-footer-legal {
+            flex-shrink: 0;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 8px 4px 4px;
+            text-align: center;
+        }
+
+        .site-footer-legal nav {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 4px 8px;
+            font-size: 0.78rem;
+            line-height: 1.4;
+        }
+
+        .site-footer-legal a {
+            color: #9ca3af;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .site-footer-legal a:hover {
+            color: #38bdf8;
+        }
+
+        .site-footer-legal .site-footer-sep {
+            color: rgba(255, 255, 255, 0.28);
+            font-size: 0.65rem;
+            line-height: 1;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12px 14px 8px;
+            }
+
+            body.has-public-topbar {
+                padding-top: 56px;
+            }
+
+            .public-topbar {
+                flex-wrap: wrap;
+                height: auto;
+                min-height: 44px;
+                padding: 8px 14px;
+                gap: 8px;
+            }
+
+            .subscriber-greet {
+                font-size: calc(1.02rem + 2pt);
+            }
+
+            .container {
+                padding: 22px 18px;
+            }
+
+            h2.page-title {
+                font-size: 1.15rem;
+                margin-bottom: 6px;
+            }
+
+            .public-banner {
+                margin-bottom: 14px;
+                padding: 10px 12px;
+                font-size: 0.82em;
+            }
+
+            .example {
+                margin-top: 12px;
+                padding: 11px 12px;
+                font-size: 0.82em;
+            }
+
+            .page-footer {
+                margin-top: 12px;
+                font-size: 12px;
+            }
+
+            .site-footer-legal {
+                padding: 6px 2px 2px;
+            }
+
+            .site-footer-legal nav {
+                font-size: 0.74rem;
+            }
+        }
+
+        /* Modal registro + Stripe */
+        .register-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .register-modal.is-open {
+            display: flex;
+        }
+
+        .register-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.75);
+            backdrop-filter: blur(6px);
+        }
+
+        .register-modal-panel {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 400px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 32px 28px 28px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .register-modal-close {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 1.5rem;
+            line-height: 1;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+
+        .register-modal-close:hover {
+            color: #e5e7eb;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .register-modal-title {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #e5e7eb;
+            margin-bottom: 8px;
+        }
+
+        .register-modal-mobile-only {
+            display: inline;
+        }
+
+        .register-modal-desktop-only {
+            display: none;
+        }
+
+        .register-modal-tagline {
+            text-align: center;
+            font-size: 0.88rem;
+            color: #bae6fd;
+            margin-bottom: 10px;
+            line-height: 1.45;
+        }
+
+        .register-modal-hint {
+            text-align: center;
+            font-size: 0.82rem;
+            color: #9ca3af;
+            margin-bottom: 18px;
+            line-height: 1.4;
+        }
+
+        .register-form-error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.2);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #fecaca;
+            margin-bottom: 14px;
+        }
+
+        .register-modal .input-group {
+            margin-bottom: 14px;
+        }
+
+        .register-modal .input-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-bottom: 6px;
+        }
+
+        .register-modal .input-group input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            color: #fff;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .register-modal .input-group input:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+
+        .plan-fieldset {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 12px 14px 14px;
+            margin-bottom: 18px;
+        }
+
+        .plan-fieldset legend {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            padding: 0 6px;
+        }
+
+        .plan-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .plan-option {
+            flex: 1;
+            min-width: 120px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9rem;
+            color: #e5e7eb;
+        }
+
+        .plan-option-body {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .plan-option-name {
+            font-weight: 500;
+        }
+
+        .plan-option-price {
+            font-size: 0.82rem;
+            color: #9ca3af;
+        }
+
+        .plan-option-save {
+            font-size: 0.74rem;
+            color: #86efac;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        .plan-option:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+        }
+
+        .plan-option input {
+            accent-color: #38bdf8;
+        }
+
+        .register-submit {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            color: white;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .register-submit:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(56, 189, 248, 0.3);
+        }
+
+        .register-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        @media (min-width: 769px) {
+            .register-modal-mobile-only {
+                display: none;
+            }
+
+            .register-modal-desktop-only {
+                display: inline;
+            }
+
+            .register-modal-panel {
+                max-width: 560px;
+                padding: 24px 32px 20px;
+                max-height: calc(100vh - 48px);
+            }
+
+            .register-modal-title {
+                margin-bottom: 6px;
+            }
+
+            .register-modal-tagline {
+                margin-bottom: 8px;
+            }
+
+            .register-modal-hint {
+                margin-bottom: 12px;
+            }
+
+            .register-modal .input-group {
+                margin-bottom: 10px;
+            }
+
+            .plan-fieldset {
+                padding: 10px 12px 12px;
+                margin-bottom: 14px;
+            }
+
+            .plan-options {
+                flex-wrap: nowrap;
+            }
+
+            .plan-option {
+                min-width: 0;
+            }
+        }
+    </style>
+</head>
+<body class="has-public-topbar" data-open-register="{% if open_register == '1' %}1{% else %}0{% endif %}">
+    {% if show_public_banner %}
+    <header class="public-topbar" role="banner">
+        <span class="public-topbar-brand">AUTO SEARCH</span>
+        <nav class="public-topbar-nav" aria-label="Cuenta">
+            <a href="{{ url_for('login') }}">Entrar</a>
+            <span class="sep" aria-hidden="true">|</span>
+            <a href="#" class="js-open-register">Regístrate</a>
+        </nav>
+    </header>
+    {% else %}
+    <header class="public-topbar" role="banner">
+        <span class="public-topbar-brand">AUTO SEARCH</span>
+        <nav class="public-topbar-nav" aria-label="Sesión">
+            <a href="{{ url_for('dashboard') }}">Panel</a>
+            <span class="sep" aria-hidden="true">|</span>
+            <a href="{{ url_for('logout') }}">Salir</a>
+        </nav>
+    </header>
+    {% endif %}
+
+    <main class="page-main">
+    {% if not show_public_banner %}
+    <p class="subscriber-greet" aria-label="Usuario en sesión">Hola, {{ current_user.username }}.</p>
+    {% endif %}
+    <div class="container">
+        <h2 class="page-title">Búsqueda NAGS</h2>
+
+        {% if show_public_banner %}
+        <div class="public-banner">
+            Versión Gratis solo permite buscar en catálogo 2025. Para tener acceso a todos los catálogos
+            <a href="#" class="js-open-register">regístrate aquí</a>.
+        </div>
+        {% endif %}
+        
+        <div class="search-box">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Busca por marca, coche o ambos. Modelo obligatorio."
+                autocomplete="off"
+            >
+            <button class="voice-btn" id="voiceBtn" title="Búsqueda por voz">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+            </button>
+        </div>
+        
+        <button class="search-btn" id="searchBtn">Buscar</button>
+        
+        <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <p>Buscando...</p>
+        </div>
+        
+        <div class="result" id="result"></div>
+        
+        <div class="example">
+            <strong>Ejemplos de búsqueda:</strong><br>
+            {% if show_public_banner %}
+            • Honda Civic 2025<br>
+            • Corolla 2025<br>
+            • Ford 2025<br>
+            {% else %}
+            • Honda Civic 2020<br>
+            • Corolla 2012<br>
+            • Ford 2021<br>
+            {% endif %}
+        </div>
+
+        <div class="page-footer">
+            Sistema de búsqueda rápida en NAGS.
+        </div>
+    </div>
+    </main>
+
+    <footer class="site-footer-legal" role="contentinfo">
+        <nav aria-label="Enlaces legales e información">
+            <a href="{{ url_for('terminos') }}">Términos</a>
+            <span class="site-footer-sep" aria-hidden="true">·</span>
+            <a href="{{ url_for('privacidad') }}">Privacidad</a>
+            <span class="site-footer-sep" aria-hidden="true">·</span>
+            <a href="{{ url_for('preguntas_frecuentes') }}">Preguntas frecuentes</a>
+        </nav>
+    </footer>
+
+    <div id="registerModal" class="register-modal" aria-hidden="true" role="dialog" aria-labelledby="registerModalTitle">
+        <div class="register-modal-backdrop" data-close-modal tabindex="-1"></div>
+        <div class="register-modal-panel">
+            <button type="button" class="register-modal-close" data-close-modal aria-label="Cerrar">&times;</button>
+            <h2 id="registerModalTitle" class="register-modal-title">Crear cuenta</h2>
+            <p class="register-modal-tagline">
+                <span class="register-modal-mobile-only">Todos los catálogos: 1949 a 2025</span>
+                <span class="register-modal-desktop-only">Acceso a todos los catálogos 1949 a 2025</span>
+            </p>
+            <p class="register-modal-hint">
+                <span class="register-modal-mobile-only">Pago seguro con Stripe</span>
+                <span class="register-modal-desktop-only">Elige plan y continúa al pago seguro con Stripe.</span>
+            </p>
+            <div id="registerFormError" class="register-form-error" style="display: none;"></div>
+            <form id="registerForm" novalidate>
+                <div class="input-group">
+                    <label for="regUsername">Usuario (Elige el que quieras)</label>
+                    <input type="text" id="regUsername" name="username" required autocomplete="username" minlength="2">
+                </div>
+                <div class="input-group">
+                    <label for="regEmail">Email</label>
+                    <input type="email" id="regEmail" name="email" required autocomplete="email">
+                </div>
+                <div class="input-group">
+                    <label for="regPassword">Contraseña (mín. 8 caracteres)</label>
+                    <input type="password" id="regPassword" name="password" required autocomplete="new-password" minlength="8">
+                </div>
+                <fieldset class="plan-fieldset">
+                    <legend>Plan de suscripción</legend>
+                    <div class="plan-options">
+                        <label class="plan-option">
+                            <input type="radio" name="plan" value="monthly" checked>
+                            <span class="plan-option-body">
+                                <span class="plan-option-name">Mensual</span>
+                                <span class="plan-option-price">200&nbsp;MXN / mes</span>
+                            </span>
+                        </label>
+                        <label class="plan-option">
+                            <input type="radio" name="plan" value="annual">
+                            <span class="plan-option-body">
+                                <span class="plan-option-name">Anual</span>
+                                <span class="plan-option-price">2,000&nbsp;MXN / año</span>
+                                <span class="plan-option-save">Ahorra 17%</span>
+                            </span>
+                        </label>
+                    </div>
+                </fieldset>
+                <button type="submit" class="register-submit" id="registerSubmit">Continuar al pago</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const SHOULD_OPEN_REGISTER = document.body.dataset.openRegister === '1';
+
+        const searchInput = document.getElementById('searchInput');
+        const searchPlaceholderDesktop = 'Busca por marca, coche o ambos. Modelo obligatorio.';
+        const searchPlaceholderMobile = 'Marca, Coche o Ambos';
+        const mqSearchMobile = window.matchMedia('(max-width: 480px)');
+        function syncSearchInputPlaceholder() {
+            if (!searchInput) return;
+            searchInput.placeholder = mqSearchMobile.matches ? searchPlaceholderMobile : searchPlaceholderDesktop;
+        }
+        syncSearchInputPlaceholder();
+        mqSearchMobile.addEventListener('change', syncSearchInputPlaceholder);
+
+        const searchBtn = document.getElementById('searchBtn');
+        const voiceBtn = document.getElementById('voiceBtn');
+        const loader = document.getElementById('loader');
+        const result = document.getElementById('result');
+        
+        let recognition;
+        
+        // Configurar reconocimiento de voz
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'es-MX';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            
+            recognition.onstart = () => {
+                voiceBtn.classList.add('listening');
+            };
+            
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                searchInput.value = transcript;
+                voiceBtn.classList.remove('listening');
+            };
+            
+            recognition.onerror = (event) => {
+                console.error('Error de reconocimiento:', event.error);
+                voiceBtn.classList.remove('listening');
+                showResult('Error al reconocer voz. Intenta de nuevo.', 'error');
+            };
+            
+            recognition.onend = () => {
+                voiceBtn.classList.remove('listening');
+            };
+        } else {
+            voiceBtn.style.display = 'none';
+        }
+        
+        // Evento de búsqueda por voz
+        voiceBtn.addEventListener('click', () => {
+            if (recognition) {
+                recognition.start();
+            }
+        });
+        
+        // Evento de búsqueda
+        searchBtn.addEventListener('click', performSearch);
+searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        performSearch();
+    }
+});
+
+async function performSearch() {
+    const query = searchInput.value.trim();
+    
+    if (!query) {
+        showResult('Por favor ingresa un término de búsqueda', 'error');
+        return;
+    }
+
+    // 🔥 VALIDACIÓN DE AÑO (PRO)
+    const fullYear = query.match(/\b(19|20)\d{2}\b/); // 1990–2099
+    const shortYear = query.match(/\b\d{2}\b/); // detecta "20", "98", etc.
+
+    if (!fullYear) {
+        if (shortYear) {
+            showResult('El año debe tener 4 dígitos (ej: 2020, no "20")', 'error');
+        } else {
+            showResult('Debes incluir un año (ej: 2020)', 'error');
+        }
+        return;
+    }
+
+    // Mostrar loader
+    loader.classList.add('active');
+    result.style.display = 'none';
+    searchBtn.disabled = true;
+
+    try {
+        const response = await fetch('/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ query })
+        });
+        
+        const data = await response.json();
+        
+        if (data.found) {
+            showResult(
+                `<div class="result-success-layout">` +
+                `<div class="result-success-main">` +
+                `✅ ${data.message}<br><br>` +
+                `<strong>Catálogo:</strong> ${data.pdf_name}` +
+                `</div>` +
+                `<button type="button" class="btn-catalogo" onclick="openPDF('${data.pdf_name}', ${data.page})">Ver Catálogo</button>` +
+                `</div>`,
+                'success'
+            );
+        } else {
+            showResult(data.message || 'No se encontraron resultados', 'info');
+        }
+    } catch (error) {
+        showResult('Error al realizar la búsqueda: ' + error.message, 'error');
+    } finally {
+        loader.classList.remove('active');
+        searchBtn.disabled = false;
+    }
+}
+        
+        function showResult(message, type) {
+            result.innerHTML = message;
+            result.className = 'result ' + type;
+            result.style.display = 'block';
+        }
+        
+        function openPDF(pdfName, page) {
+            window.location.href = `/pdf/${encodeURIComponent(pdfName)}/${page}`;
+        }
+
+        /* Registro → Stripe Checkout */
+        (function () {
+            const modal = document.getElementById('registerModal');
+            const form = document.getElementById('registerForm');
+            const errEl = document.getElementById('registerFormError');
+            const submitBtn = document.getElementById('registerSubmit');
+
+            function openRegisterModal() {
+                modal.classList.add('is-open');
+                modal.setAttribute('aria-hidden', 'false');
+                errEl.style.display = 'none';
+            }
+
+            function closeRegisterModal() {
+                modal.classList.remove('is-open');
+                modal.setAttribute('aria-hidden', 'true');
+            }
+
+            function showRegisterError(msg) {
+                errEl.textContent = msg;
+                errEl.style.display = 'block';
+            }
+
+            document.querySelectorAll('.js-open-register').forEach(function (el) {
+                el.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    openRegisterModal();
+                });
+            });
+
+            modal.querySelectorAll('[data-close-modal]').forEach(function (el) {
+                el.addEventListener('click', closeRegisterModal);
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+                    closeRegisterModal();
+                }
+            });
+
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('open_register') === '1' || SHOULD_OPEN_REGISTER) {
+                openRegisterModal();
+            }
+            if (params.get('register_canceled') === '1') {
+                openRegisterModal();
+                showRegisterError('Pago cancelado. Puedes intentar de nuevo cuando quieras.');
+            }
+
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                errEl.style.display = 'none';
+                const username = document.getElementById('regUsername').value.trim();
+                const email = document.getElementById('regEmail').value.trim();
+                const password = document.getElementById('regPassword').value;
+                const plan = form.querySelector('input[name="plan"]:checked').value;
+
+                if (password.length < 8) {
+                    showRegisterError('La contraseña debe tener al menos 8 caracteres.');
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                try {
+                    const res = await fetch('/api/register-checkout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ username, email, password, plan }),
+                    });
+                    const data = await res.json().catch(function () { return {}; });
+                    if (!res.ok) {
+                        showRegisterError(data.error || 'No se pudo iniciar el pago.');
+                        return;
+                    }
+                    if (data.checkout_url) {
+                        window.location.href = data.checkout_url;
+                        return;
+                    }
+                    showRegisterError('Respuesta inesperada del servidor.');
+                } catch (err) {
+                    showRegisterError('Error de red. Intenta de nuevo.');
+                } finally {
+                    submitBtn.disabled = false;
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

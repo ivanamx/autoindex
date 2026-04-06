@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pago recibido</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body {
+      background: radial-gradient(circle at top, #0f172a, #020617);
+      color: #e5e7eb;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.05);
+      padding: 40px;
+      border-radius: 20px;
+      max-width: 420px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    }
+    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; line-height: 1.35; color: #f8fafc; }
+    p.sub { color: #9ca3af; font-size: 0.9rem; line-height: 1.5; margin-bottom: 24px; }
+    a {
+      display: inline-block;
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: white;
+      font-weight: 500;
+      text-decoration: none;
+      transition: 0.2s;
+    }
+    a:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px rgba(56,189,248,0.3);
+    }
+  </style>
+</head>
+<body data-login-url="{{ url_for('login') }}">
+  <div class="container">
+    <h1>Gracias, ya puedes iniciar sesión</h1>
+    <p class="sub" id="redirectHint">Redirigiendo automáticamente a inicio de sesión…</p>
+    <a href="{{ url_for('login') }}">Ir a iniciar sesión ahora</a>
+  </div>
+  <script>
+    (function () {
+      var loginUrl = document.body.getAttribute('data-login-url');
+      if (!loginUrl) return;
+      window.setTimeout(function () {
+        window.location.href = loginUrl;
+      }, 3500);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #0f172a, #020617);
+      color: #e5e7eb;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.05);
+      padding: 40px;
+      border-radius: 20px;
+      width: 360px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 25px;
+      font-weight: 600;
+      font-size: 20px;
+      letter-spacing: 1px;
+      color: #38bdf8;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      color: white;
+      outline: none;
+      transition: 0.2s;
+    }
+
+    input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56,189,248,0.2);
+    }
+
+    .options {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 20px;
+      color: #9ca3af;
+    }
+
+    .options label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .options a {
+      color: #9ca3af;
+      text-decoration: none;
+      font-weight: 500;
+      transition: 0.2s;
+    }
+
+    .options a:hover {
+      color: #38bdf8;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px rgba(56,189,248,0.3);
+    }
+
+    .footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .error {
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid rgba(255,0,0,0.2);
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 13px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+
+    <h2>Iniciar sesión</h2>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="error">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+
+      <div class="input-group">
+        <input 
+          type="text" 
+          name="identifier" 
+          placeholder="Email o username"
+          required
+          autocomplete="username">
+      </div>
+
+      <div class="input-group">
+        <input 
+          type="password" 
+          name="password" 
+          placeholder="Contraseña"
+          required
+          autocomplete="current-password">
+      </div>
+
+      <div class="options">
+        <label>
+          <input type="checkbox" name="remember"> Recordarme
+        </label>
+        <a href="{{ url_for('forgot_password') }}">¿Olvidaste tu contraseña?</a>
+      </div>
+
+      <button type="submit">Entrar</button>
+
+    </form>
+
+    <div class="footer">
+      Sistema de búsqueda rápida en NAGS.
+    </div>
+
+  </div>
+
+</body>
+</html>

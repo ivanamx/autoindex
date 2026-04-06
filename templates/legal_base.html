@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Documento legal{% endblock %} · {{ site_name }}</title>
+    <meta name="description" content="{% block meta_description %}{% endblock %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        html { height: 100%; scroll-behavior: smooth; }
+
+        body {
+            background: radial-gradient(circle at top, #0f172a, #020617);
+            background-attachment: fixed;
+            color: #e5e7eb;
+            min-height: 100%;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 20px 16px;
+        }
+
+        .skip-link {
+            position: absolute;
+            left: -9999px;
+            z-index: 999;
+            padding: 8px 16px;
+            background: #38bdf8;
+            color: #020617;
+            font-weight: 600;
+        }
+
+        .skip-link:focus {
+            left: 12px;
+            top: 12px;
+        }
+
+        .legal-header {
+            flex-shrink: 0;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto 16px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .legal-brand {
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: 0.1em;
+            color: #38bdf8;
+        }
+
+        .legal-back {
+            color: #9ca3af;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.2s;
+        }
+
+        .legal-back:hover {
+            color: #38bdf8;
+            border-color: rgba(56, 189, 248, 0.35);
+            background: rgba(56, 189, 248, 0.08);
+        }
+
+        .legal-wrap {
+            flex: 1 1 auto;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            min-height: 0;
+        }
+
+        .legal-panel {
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 20px;
+            padding: 28px 26px 32px;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        }
+
+        .legal-updated {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        .legal-prose h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #f8fafc;
+            margin-bottom: 10px;
+            line-height: 1.25;
+        }
+
+        .legal-prose h2 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin: 26px 0 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .legal-prose h2:first-of-type {
+            margin-top: 0;
+        }
+
+        .legal-prose h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin: 18px 0 8px;
+        }
+
+        .legal-prose p, .legal-prose li {
+            font-size: 0.9rem;
+            line-height: 1.65;
+            color: #cbd5e1;
+        }
+
+        .legal-prose p {
+            margin-bottom: 12px;
+        }
+
+        .legal-prose ul, .legal-prose ol {
+            margin: 8px 0 14px 1.25rem;
+        }
+
+        .legal-prose li {
+            margin-bottom: 6px;
+        }
+
+        .legal-prose strong {
+            color: #f1f5f9;
+            font-weight: 600;
+        }
+
+        .legal-prose a {
+            color: #38bdf8;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .legal-prose a:hover {
+            color: #7dd3fc;
+        }
+
+        .legal-callout {
+            margin: 16px 0;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.22);
+            font-size: 0.88rem;
+            line-height: 1.55;
+            color: #bae6fd;
+        }
+
+        .legal-footer {
+            flex-shrink: 0;
+            max-width: 800px;
+            width: 100%;
+            margin: 16px auto 0;
+            padding-top: 8px;
+            text-align: center;
+        }
+
+        .legal-footer nav {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 4px 8px;
+            font-size: 0.78rem;
+        }
+
+        .legal-footer a {
+            color: #9ca3af;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .legal-footer a:hover {
+            color: #38bdf8;
+        }
+
+        .legal-footer .site-footer-sep {
+            color: rgba(255, 255, 255, 0.28);
+            font-size: 0.65rem;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 14px 14px 12px; }
+            .legal-panel { padding: 22px 18px 26px; }
+            .legal-prose h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+    <a class="skip-link" href="#contenido-legal">Ir al contenido</a>
+    <header class="legal-header">
+        <span class="legal-brand">{{ site_name }}</span>
+        <a class="legal-back" href="{{ url_for('index') }}">← Volver al inicio</a>
+    </header>
+
+    <div class="legal-wrap">
+        <article id="contenido-legal" class="legal-panel">
+            <p class="legal-updated" role="note">Última actualización: <time datetime="{{ legal_last_updated_iso }}">{{ legal_last_updated_human }}</time>.</p>
+            {% block legal_body %}{% endblock %}
+        </article>
+    </div>
+
+    <footer class="legal-footer" role="contentinfo">
+        <nav aria-label="Enlaces legales e información">
+            <a href="{{ url_for('terminos') }}">Términos</a>
+            <span class="site-footer-sep" aria-hidden="true">·</span>
+            <a href="{{ url_for('privacidad') }}">Privacidad</a>
+            <span class="site-footer-sep" aria-hidden="true">·</span>
+            <a href="{{ url_for('preguntas_frecuentes') }}">Preguntas frecuentes</a>
+        </nav>
+    </footer>
+</body>
+</html>

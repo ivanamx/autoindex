@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel · {{ site_name }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+    body {
+      background: radial-gradient(circle at top, #0f172a, #020617);
+      background-attachment: fixed;
+      color: #e5e7eb;
+      min-height: 100vh;
+      padding: 72px 20px 28px;
+    }
+
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 18px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      z-index: 50;
+    }
+
+    .brand {
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.1em;
+      color: #38bdf8;
+    }
+
+    .topbar nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .topbar a {
+      color: #9ca3af;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 6px 10px;
+      border-radius: 8px;
+    }
+    .topbar a:hover { color: #38bdf8; background: rgba(56, 189, 248, 0.08); }
+
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 20px;
+      padding: 26px 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .panel-page-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px 20px;
+      margin-bottom: 18px;
+    }
+
+    .panel-page-header-text {
+      flex: 1 1 220px;
+      min-width: 0;
+    }
+
+    .panel-page-header-text h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: #f8fafc;
+      margin: 0 0 6px 0;
+    }
+
+    .panel-page-header-text .subtitle {
+      color: #9ca3af;
+      font-size: 0.88rem;
+      margin: 0;
+      line-height: 1.45;
+    }
+
+    .panel-page-header-actions {
+      flex-shrink: 0;
+    }
+
+    .panel-page-header-actions .btn-primary { margin-top: 0; }
+
+    @media (max-width: 520px) {
+      .panel-page-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 6px 8px;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      .panel-page-header-text {
+        display: contents;
+      }
+      .panel-page-header-text h1 {
+        grid-column: 1;
+        grid-row: 1;
+        margin: 0;
+        font-size: 1.15rem;
+        line-height: 1.2;
+      }
+      .panel-page-header-text .subtitle {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        margin-top: 2px;
+      }
+      .panel-page-header-actions {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: center;
+      }
+      .panel-page-header-actions .btn-primary {
+        margin-top: 0;
+        padding: 6px 9px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        line-height: 1.2;
+        border-radius: 8px;
+        white-space: normal;
+        max-width: min(118px, 36vw);
+        text-align: center;
+      }
+    }
+
+    h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin: 18px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    h2:first-of-type { margin-top: 0; }
+
+    .flash {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #bae6fd;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: 0.2s;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(56, 189, 248, 0.3); }
+
+    .subscription-top-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 14px 20px;
+      margin-bottom: 12px;
+    }
+
+    .subscription-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px 14px;
+      flex: 1 1 280px;
+      min-width: 0;
+      font-size: 0.88rem;
+    }
+
+    .subscription-metrics .sub-metric {
+      min-width: 0;
+    }
+
+    .subscription-metrics .sub-metric .value {
+      overflow-wrap: anywhere;
+    }
+
+    .subscription-metrics .sub-metric .value {
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 520px) {
+      .subscription-metrics {
+        gap: 8px 8px;
+        font-size: 0.76rem;
+      }
+      .subscription-metrics .label {
+        font-size: 0.65rem;
+        line-height: 1.2;
+      }
+      .subscription-metrics .sub-metric .value {
+        font-size: 0.78rem;
+        line-height: 1.25;
+      }
+    }
+
+    .subscription-portal-actions {
+      flex-shrink: 0;
+    }
+
+    .subscription-portal-actions .btn-primary {
+      margin-top: 0;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 640px) {
+      /* Evita que la franja de métricas crezca en vertical (relenaba espacio hasta el botón) */
+      .subscription-top-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .subscription-metrics {
+        flex: 0 0 auto;
+        flex-grow: 0;
+      }
+      .subscription-portal-actions { align-self: stretch; }
+      .subscription-portal-actions .btn-primary {
+        white-space: normal;
+        text-align: center;
+        width: 100%;
+      }
+    }
+
+    .btn-ghost {
+      display: inline-block;
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: transparent;
+      color: #e5e7eb;
+      font-weight: 500;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-ghost:hover { border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 16px;
+      font-size: 0.88rem;
+    }
+    @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+
+    .label { color: #6b7280; font-size: 0.75rem; margin-bottom: 2px; }
+    .value { color: #e5e7eb; font-weight: 500; word-break: break-word; }
+
+    .profile-form { margin-top: 10px; }
+
+    .profile-account-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 14px 18px;
+    }
+
+    .profile-block-user {
+      flex: 1 1 200px;
+      min-width: 0;
+    }
+
+    .profile-block-user label,
+    .profile-block-email label {
+      display: block;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+
+    .profile-inline-field-btn {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .profile-form input.profile-username-input {
+      flex: 1 1 160px;
+      min-width: 140px;
+      max-width: 280px;
+      width: auto;
+      min-height: 0;
+      max-height: 44px;
+      padding: 10px 12px;
+      line-height: 1.25;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.04);
+      color: #fff;
+      outline: none;
+      box-sizing: border-box;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .profile-form input.profile-username-input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+    }
+
+    .btn-save-user {
+      padding: 8px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-top: 0;
+      flex-shrink: 0;
+    }
+
+    .profile-block-email {
+      flex: 1 1 200px;
+      min-width: 160px;
+      padding-bottom: 2px;
+    }
+
+    .profile-form .email-display {
+      font-size: 0.95rem;
+      color: #e5e7eb;
+      font-weight: 500;
+      padding: 2px 0;
+      margin: 0;
+      word-break: break-all;
+    }
+
+    @media (max-width: 600px) {
+      /* Usuario + correo en la misma fila; input altura fija (evita caja enorme en móvil) */
+      .profile-account-line {
+        flex-direction: row;
+        align-items: flex-start;
+        flex-wrap: nowrap;
+        gap: 10px 12px;
+      }
+      .profile-block-user,
+      .profile-block-email {
+        flex: 1 1 0;
+        min-width: 0;
+        align-self: flex-start;
+      }
+      .profile-block-email {
+        padding-bottom: 0;
+      }
+      .profile-form input.profile-username-input {
+        max-width: none;
+        width: 100%;
+        max-height: 44px;
+        padding: 9px 10px;
+        line-height: 1.25;
+        font-size: 0.88rem;
+        flex-shrink: 0;
+      }
+      .profile-inline-field-btn {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .btn-save-user {
+        width: 100%;
+        padding: 8px 10px;
+        font-size: 0.78rem;
+      }
+      .profile-block-user label,
+      .profile-block-email label {
+        font-size: 0.72rem;
+        margin-bottom: 4px;
+      }
+      .profile-form .email-display {
+        font-size: 0.82rem;
+        line-height: 1.35;
+      }
+    }
+
+    .callout {
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(250, 204, 21, 0.06);
+      border: 1px solid rgba(250, 204, 21, 0.2);
+      color: #fde68a;
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .callout a { color: #38bdf8; font-weight: 600; }
+
+    .session-list { list-style: none; margin-top: 10px; }
+    .session-list li.session-card {
+      position: relative;
+      padding: 12px 12px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+    }
+    .session-list .badge-session-current {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      z-index: 1;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      background: rgba(34, 197, 94, 0.2);
+      color: #86efac;
+      border: 1px solid rgba(34, 197, 94, 0.25);
+      white-space: nowrap;
+    }
+    .session-card-body {
+      min-width: 0;
+    }
+    .session-card--current .session-card-body {
+      padding-right: 118px;
+    }
+    @media (max-width: 420px) {
+      .session-list .badge-session-current {
+        top: 8px;
+        right: 10px;
+        font-size: 0.62rem;
+        padding: 2px 8px;
+      }
+      .session-card--current .session-card-body {
+        padding-right: 12px;
+        padding-top: 28px;
+      }
+    }
+
+    .footer-links {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+    .footer-links a {
+      color: #9ca3af;
+      text-decoration: none;
+      margin: 0 6px;
+    }
+    .footer-links a:hover { color: #38bdf8; }
+  </style>
+</head>
+<body>
+  <header class="topbar" role="banner">
+    <span class="brand">{{ site_name }}</span>
+    <nav aria-label="Navegación">
+      <a href="{{ url_for('index') }}">Búsqueda</a>
+      <a href="{{ url_for('logout') }}">Salir</a>
+    </nav>
+  </header>
+
+  <div class="wrap">
+    <div class="panel">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="flash">{{ messages[0] }}</div>
+        {% endif %}
+      {% endwith %}
+
+      <div class="panel-page-header">
+        <div class="panel-page-header-text">
+          <h1>Tu panel</h1>
+          <p class="subtitle">Resumen de cuenta, accesos permitidos y suscripción.</p>
+        </div>
+        <div class="panel-page-header-actions">
+          <a class="btn-primary" href="{{ url_for('index') }}">Ir a búsqueda</a>
+        </div>
+      </div>
+
+      <h2>Suscripción</h2>
+      <div class="subscription-top-row">
+        <div class="subscription-metrics">
+          <div class="sub-metric">
+            <div class="label">Estado</div>
+            <div class="value">{% if subscription_status == 'active' %}Activa{% else %}{{ subscription_status }}{% endif %}</div>
+          </div>
+          <div class="sub-metric">
+            <div class="label">Plan</div>
+            <div class="value">{{ subscription_plan_label }}</div>
+          </div>
+          <div class="sub-metric">
+            <div class="label">Fin de periodo</div>
+            <div class="value">{{ period_end_label or '—' }}</div>
+          </div>
+        </div>
+        <div class="subscription-portal-actions">
+          <form method="post" action="{{ url_for('dashboard_stripe_portal') }}" style="margin:0;">
+            <button type="submit" class="btn-primary">Gestionar facturación y suscripción</button>
+          </form>
+        </div>
+      </div>
+
+      <p style="font-size:0.86rem;color:#9ca3af;line-height:1.55;margin-top:4px;">
+        Gestiona tu suscripción en la <strong>página segura de Stripe</strong> (método de pago, facturas y renovación).
+      </p>
+      <div class="callout" style="margin-top:14px;">
+        ¿Problemas con el enlace de Stripe? Escríbenos
+        {% if whatsapp_phone %}
+        <a href="https://wa.me/{{ whatsapp_phone }}" target="_blank" rel="noopener noreferrer">por WhatsApp</a>
+        {% else %}
+        a <a href="mailto:{{ site_contact_email }}">{{ site_contact_email }}</a>
+        {% endif %}
+        indicando tu usuario y correo.
+      </div>
+
+      <h2>Límites de sesiones</h2>
+      <p style="font-size: 0.86rem; color: #9ca3af; line-height: 1.55;">
+        <strong>Mensual</strong>: hasta <strong>3</strong> sesiones.
+        <strong>Anual</strong>: hasta <strong>5</strong>. Límite según tu plan: <strong>{{ device_cap }}</strong>.
+      </p>
+
+      <h2>Cuenta</h2>
+      <form class="profile-form" method="post" action="{{ url_for('dashboard_update_profile') }}">
+        <div class="profile-account-line">
+          <div class="profile-block-user">
+            <label for="username">Usuario (editable)</label>
+            <div class="profile-inline-field-btn">
+              <input class="profile-username-input" type="text" id="username" name="username" value="{{ dash_username }}" required minlength="2" maxlength="80" autocomplete="username">
+              <button type="submit" class="btn-primary btn-save-user">Guardar usuario</button>
+            </div>
+          </div>
+          <div class="profile-block-email">
+            <label>Correo</label>
+            <p class="email-display">{{ dash_email }}</p>
+          </div>
+        </div>
+      </form>
+
+      <h2>Sesiones activas</h2>
+      <p style="font-size: 0.82rem; color: #9ca3af;">Cada navegador cuenta como una sesión.</p>
+      {% if device_sessions %}
+        <ul class="session-list">
+          {% for s in device_sessions %}
+            <li class="session-card{% if s.is_current %} session-card--current{% endif %}">
+              {% if s.is_current %}
+              <span class="badge-session-current">Esta sesión</span>
+              {% endif %}
+              <div class="session-card-body">
+                <strong>Actividad:</strong> {{ s.last_seen_at }}<br>
+                <strong>Desde:</strong> {{ s.created_at }}<br>
+                <span style="opacity:0.85;"><strong>Agente:</strong> {{ s.user_agent }}</span>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p style="font-size:0.85rem;color:#6b7280;">No hay sesiones registradas.</p>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('dashboard_revoke_other_sessions') }}" style="margin-top:12px;">
+        <button type="submit" class="btn-ghost">Cerrar sesión en los demás dispositivos</button>
+      </form>
+    </div>
+
+    <p class="footer-links">
+      <a href="{{ url_for('terminos') }}">Términos</a>·
+      <a href="{{ url_for('privacidad') }}">Privacidad</a>·
+      <a href="{{ url_for('preguntas_frecuentes') }}">FAQ</a>
+    </p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,167 @@
+{% extends "legal_base.html" %}
+{% block title %}Términos de uso{% endblock %}
+{% block meta_description %}Términos y condiciones de uso de {{ site_name }}: búsqueda en catálogos NAGS, planes gratuito y de suscripción, pagos con Stripe y normas aplicables en México.{% endblock %}
+
+{% block legal_body %}
+<div class="legal-prose">
+    <h1>Términos y condiciones de uso</h1>
+    <p>
+        Los presentes Términos y Condiciones («Términos») regulan el acceso y uso del sitio web, la aplicación
+        y los servicios de búsqueda en catálogos NAGS comercializados bajo la marca <strong>{{ site_name }}</strong>
+        (en adelante, el «Servicio»), operados por el responsable del Servicio con domicilio en territorio de los
+        Estados Unidos Mexicanos (en adelante, «nosotros», «el Responsable» o «la Empresa»).
+    </p>
+    <p>
+        Al acceder, registrarte o utilizar el Servicio, declaras haber leído y aceptado estos Términos y el
+        <a href="{{ url_for('privacidad') }}">Aviso de privacidad</a>. Si no estás de acuerdo, debes abstenerse de usar el Servicio.
+    </p>
+
+    <h2 id="definiciones">1. Definiciones</h2>
+    <ul>
+        <li><strong>Usuario:</strong> persona que utiliza el Servicio, con o sin cuenta registrada.</li>
+        <li><strong>Cuenta:</strong> credenciales (usuario, correo y contraseña) que permiten acceder a funciones de suscriptor.</li>
+        <li><strong>Modo gratuito:</strong> acceso limitado a la búsqueda en el catálogo público indicado en la plataforma (actualmente orientado al catálogo 2025), sin costo.</li>
+        <li><strong>Suscripción:</strong> plan de pago recurrente (mensual o anual) que habilita el acceso ampliado a catálogos según lo descrito en el Servicio.</li>
+        <li><strong>Contenido de terceros:</strong> archivos PDF y datos de catálogos NAGS y análogos; la titularidad corresponde a sus respectivos titulares.</li>
+    </ul>
+
+    <h2 id="objeto">2. Objeto del Servicio</h2>
+    <p>
+        El Servicio ofrece una herramienta de <strong>búsqueda y localización</strong> de información dentro de
+        catálogos NAGS digitalizados indexados en nuestra base de datos, facilitando la apertura del PDF en la
+        página relevante cuando exista coincidencia. No vendemos los catálogos ni sustituimos la documentación
+        oficial del fabricante; el Usuario es responsable de verificar la información con las fuentes aplicables
+        en su actividad profesional o comercial.
+    </p>
+
+    <h2 id="elegibilidad">3. Elegibilidad y cuenta</h2>
+    <p>
+        Debes ser mayor de edad con plena capacidad jurídica para contratar en México o contar con autorización
+        de quien ejerce la patria potestad o tutoría. Proporcionas datos veraces al registrarte. Eres responsable
+        de la confidencialidad de tu contraseña y de las actividades realizadas con tu Cuenta. Debes notificarnos
+        de forma pronta el uso no autorizado de tu Cuenta a través del medio de contacto señalado en el
+        <a href="{{ url_for('privacidad') }}">Aviso de privacidad</a>.
+    </p>
+
+    <h2 id="planes">4. Planes, precios y facturación</h2>
+    <p>
+        Los precios publicados en el sitio aplican en <strong>moneda nacional mexicana (MXN)</strong> e incluyen
+        los impuestos aplicables de conformidad con la legislación vigente, salvo que se indique lo contrario de
+        manera expresa. Al momento de contratar, los montos de referencia son:
+    </p>
+    <ul>
+        <li><strong>Plan mensual:</strong> $200.00 MXN por cada periodo de un mes.</li>
+        <li><strong>Plan anual:</strong> $2,000.00 MXN por cada periodo de un año.</li>
+    </ul>
+    <p>
+        La Empresa puede actualizar precios con previo aviso razonable conforme a la ley y a lo establecido en
+        estos Términos; los cambios no afectarán periodos de facturación ya pagados. La renovación automática
+        y la forma de pago se gestionan a través de <strong>Stripe</strong>, proveedor de pagos conforme a sus
+        propios términos y estándares de seguridad (incluido el cumplimiento de normas PCI-DSS en el procesamiento
+        de tarjetas). Nosotros <strong>no almacenamos</strong> el número completo de tu tarjeta en nuestros servidores.
+    </p>
+    <p>
+        Para consultar tu <strong>suscripción activa y el precio del periodo en curso</strong>, actualizar
+        <strong>método de pago</strong>, acceder a <strong>facturas y recibos</strong>, y solicitar la
+        <strong>cancelación de la renovación automática al final del periodo ya pagado</strong>,
+        pondremos a tu disposición el <strong>portal de facturación para clientes de Stripe</strong> (interfaz alojada por
+        Stripe, no por nosotros, salvo que te enlacemos desde el Servicio). Las opciones exactas que veas en ese portal
+        dependen de la configuración operada por la Empresa en Stripe y de la versión vigente de sus políticas.
+    </p>
+
+    <h2 id="suscripcion">5. Suscripción, renovación, cancelación y reactivación</h2>
+    <p>
+        La suscripción se renueva automáticamente al finalizar cada periodo de facturación, salvo que solicites
+        en el <strong>portal de Stripe</strong> (o por los medios que indiquemos) que <strong>no continúe</strong> la
+        renovación, lo cual en la práctica suele programar la <strong>baja al término del periodo ya pagado</strong>
+        (cancelación «al final del ciclo»). La efectividad de la cancelación y la fecha exacta de fin de acceso señalada
+        en el portal prevalecerán frente a cualquier resumen mostrado en el Servicio, salvo error manifestado y
+        corregido sin demora por la Empresa.
+    </p>
+    <p>
+        <strong>Reactivación:</strong> mientras Stripe permita <strong>deshacer una cancelación programada</strong>
+        antes de que concluya el periodo pagado, podrás reactivar la suscripción desde el mismo portal, sin garantizar
+        nosotros una funcionalidad distinta a la que ofrezca Stripe en cada momento. Una vez
+        <strong>finalizada</strong> la suscripción y vencido el acceso, deberás contratar de nuevo el Servicio
+        conforme al flujo vigente (por ejemplo, registro y pago nuevamente), salvo promoción o excepción expresa de la Empresa.
+    </p>
+    <p>
+        <strong>Cambio de plan (mensual / anual):</strong> cuando la Empresa habilite en Stripe la posibilidad de
+        migrar entre planes ofrecidos, podrás efectuar el cambio según las reglas y <strong>precios publicados</strong> en el
+        Servicio y las condiciones que Stripe muestre en el portal. Los cambios pueden generar cargos o prorrateos
+        según la configuración de Stripe y lo aceptado por ti en el flujo de pago.
+    </p>
+    <p>
+        Las solicitudes de reembolso se evaluarán conforme a la Ley Federal de Protección al Consumidor y demás
+        normativa aplicable, así como a la política comercial vigente; en caso de controversia, tendrás los medios
+        que la ley otorga a los consumidores (incluidos los relacionados con <strong>PROFECO</strong> y la
+        procedencia de reclamaciones en instancias competentes).
+    </p>
+
+    <h2 id="uso-aceptable">6. Uso aceptable</h2>
+    <p>Te comprometes a no:</p>
+    <ul>
+        <li>Utilizar el Servicio para fines ilícitos o que vulneren derechos de terceros.</li>
+        <li>Intentar acceder a catálogos o archivos sin la autorización correspondiente (p. ej., eludir controles de suscripción).</li>
+        <li>Realizar ingeniería inversa, extracción masiva automatizada (scraping) o ataques que afecten la disponibilidad del Servicio.</li>
+        <li>Suplantar identidades o proporcionar datos falsos.</li>
+    </ul>
+    <p>
+        El incumplimiento puede derivar en la suspensión o baja de la Cuenta, sin perjuicio de las acciones legales correspondientes.
+    </p>
+
+    <h2 id="propiedad">7. Propiedad intelectual y licencia de uso</h2>
+    <p>
+        El software, diseño, marca {{ site_name }} y elementos distintivos del Servicio son propiedad del Responsable
+        o de sus licenciantes. Los catálogos y marcas NAGS son propiedad de sus titulares; la Empresa no reclama
+        titularidad sobre dichos contenidos. Te otorgamos una licencia limitada, no exclusiva, revocable e
+        intransferible para usar el Servicio conforme a estos Términos.
+    </p>
+
+    <h2 id="privacidad">8. Privacidad y datos personales</h2>
+    <p>
+        El tratamiento de tus datos personales se describe en el
+        <a href="{{ url_for('privacidad') }}">Aviso de privacidad integral</a>, elaborado con apego a la
+        <strong>Ley Federal de Protección de Datos Personales en Posesión de los Particulares</strong> y demás
+        normativa aplicable.
+    </p>
+
+    <h2 id="limitacion">9. Limitación de responsabilidad</h2>
+    <p>
+        El Servicio se ofrece «en el estado en que se encuentra». En la medida permitida por la legislación
+        mexicana: (i) no garantizamos resultados específicos ni la ausencia total de errores en la indexación o
+        búsqueda; (ii) no seremos responsables por daños indirectos, lucro cesante o pérdida de datos salvo que la
+        ley obligatoria disponga otra cosa; (iii) la responsabilidad total por cualquier reclamo relacionado con el
+        Servicio se limitará al monto pagado por ti a la Empresa en los últimos tres meses anteriores al evento,
+        cuando legalmente proceda.
+    </p>
+
+    <h2 id="fuerza-mayor">10. Fuerza mayor y mantenimiento</h2>
+    <p>
+        No seremos responsables por demoras o fallos causados por causas de fuerza mayor, fallas de proveedores
+        (incluidos hosting, Stripe o conectividad), o mantenimiento programado debidamente comunicado cuando sea razonable.
+    </p>
+
+    <h2 id="modificaciones">11. Modificaciones</h2>
+    <p>
+        Podemos actualizar estos Términos. Publicaremos la versión vigente en esta página con indicación de la
+        fecha de última actualización. El uso continuado del Servicio después de cambios sustanciales implicará,
+        en su caso, tu aceptación conforme a la legislación aplicable.
+    </p>
+
+    <h2 id="ley">12. Ley aplicable y jurisdicción</h2>
+    <p>
+        Estos Términos se interpretan conforme a las leyes de los Estados Unidos Mexicanos. Para cualquier
+        controversia, las partes se someten a la competencia de los tribunales competentes de la República Mexicana,
+        salvo normas imperativas en materia de consumo que dispongan otro fuero o procedimiento.
+    </p>
+
+    <h2 id="contacto-terminos">13. Contacto</h2>
+    <p>
+        Para consultas sobre estos Términos o el Servicio, escríbenos a
+        <strong><a href="mailto:{{ site_contact_email }}">{{ site_contact_email }}</a></strong>.
+        Atenderemos tu solicitud en los plazos y términos previstos en la legislación aplicable.
+    </p>
+</div>
+{% endblock %}
+

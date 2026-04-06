@@ -1,0 +1,91 @@
+{% extends "legal_base.html" %}
+{% block title %}Preguntas frecuentes{% endblock %}
+{% block meta_description %}Preguntas frecuentes sobre {{ site_name }}: planes NAGS, búsqueda, suscripción, pagos con Stripe, privacidad y soporte.{% endblock %}
+
+{% block legal_body %}
+<div class="legal-prose">
+    <h1>Preguntas frecuentes</h1>
+    <p>
+        Respuestas a las dudas más comunes sobre <strong>{{ site_name }}</strong>, la búsqueda en catálogos NAGS,
+        los planes y el pago seguro. Si no encuentras lo que buscas, escríbenos a
+        <a href="mailto:{{ site_contact_email }}">{{ site_contact_email }}</a>.
+    </p>
+
+    <h2 id="que-es">¿Qué es {{ site_name }}?</h2>
+    <p>
+        Es un servicio web que te permite <strong>buscar por marca, modelo y año</strong> dentro de catálogos NAGS
+        digitalizados e indexados en nuestra plataforma. Cuando hay coincidencias, puedes abrir el PDF directamente
+        en la página relevante para agilizar tu trabajo (talleres, vidrieras, distribuidores, etc.).
+    </p>
+
+    <h2 id="catalogos">¿Qué catálogos puedo consultar?</h2>
+    <p>
+        Dependiendo de tu plan: en <strong>modo gratuito</strong> el acceso está limitado al catálogo público
+        indicado en la aplicación (orientado al catálogo 2025). Con <strong>suscripción activa</strong> obtienes acceso
+        al conjunto de catálogos que el Servicio indexe, en el rango de años que se muestra en la plataforma
+        (incluido histórico hasta 1949 según disponibilidad en el índice).
+    </p>
+
+    <h2 id="ano-obligatorio">¿Por qué debo incluir el año en la búsqueda?</h2>
+    <p>
+        El sistema usa el año para <strong>seleccionar el catálogo NAGS correspondiente</strong> al vehículo. Sin año,
+        la búsqueda no puede resolver el contexto correcto. Escribe el año con cuatro dígitos (ej.: <strong>2025</strong>)
+        junto con marca y, cuando aplique, modelo.
+    </p>
+
+    <h2 id="planes-faq">¿Cuánto cuestan los planes?</h2>
+    <p>Los precios de referencia en moneda nacional (MXN), sujetos a cambios con aviso conforme a nuestros términos, son:</p>
+    <ul>
+        <li><strong>Plan mensual:</strong> $200.00 MXN por mes.</li>
+        <li><strong>Plan anual:</strong> $2,000.00 MXN por año (ahorro frente a doce pagos mensuales).</li>
+    </ul>
+
+    <h2 id="stripe">¿Es seguro pagar con tarjeta?</h2>
+    <p>
+        Los pagos se procesan con <strong>Stripe</strong>, una plataforma global certificada bajo estándares de la industria
+        de tarjetas de pago (PCI-DSS). Tus datos de tarjeta se capturan en entornos controlados por Stripe;
+        <strong>nosotros no almacenamos el número íntegro de tu tarjeta</strong> en nuestros servidores. Más información:
+        <a href="https://stripe.com/mx" rel="noopener noreferrer" target="_blank">stripe.com/mx</a>.
+    </p>
+
+    <h2 id="cancelar">¿Cómo cancelo mi suscripción o veo mis facturas?</h2>
+    <p>
+        Inicia sesión y entra a <strong>Panel</strong> → <strong>Gestionar facturación y suscripción</strong>: se abre el
+        <strong>portal de Stripe</strong>, donde puedes ver tu plan y precio vigente, actualizar tarjeta, descargar facturas
+        y programar la cancelación al final del periodo pagado. Si la interfaz de Stripe lo permite antes de que termine
+        ese periodo, también puedes <strong>reactivar</strong> una cancelación programada.
+    </p>
+    <p>
+        Si tienes un error técnico, escríbenos a
+        <a href="mailto:{{ site_contact_email }}">{{ site_contact_email }}</a> con tu usuario y correo.
+        Más detalle en los <a href="{{ url_for('terminos') }}">Términos de uso</a>.
+    </p>
+
+    <h2 id="cuenta">Olvidé mi contraseña o no puedo entrar</h2>
+    <p>
+        Si no cuentas con flujo de recuperación automática en el sitio, escribe a
+        <a href="mailto:{{ site_contact_email }}">{{ site_contact_email }}</a> desde el correo con el que te registraste
+        para validar tu identidad y recibir apoyo. Nunca compartas tu contraseña por correo.
+    </p>
+
+    <h2 id="privacidad-faq">¿Cómo tratan mis datos personales?</h2>
+    <p>
+        Publicamos un <a href="{{ url_for('privacidad') }}">Aviso de privacidad integral</a> alineado con la LFPDPPP,
+        donde explicamos qué datos recabamos, para qué los usamos, cómo ejercer tus derechos <strong>ARCO</strong> y
+        cómo contactar al Responsable.
+    </p>
+
+    <h2 id="exactitud">¿La búsqueda sustituye al criterio profesional?</h2>
+    <p>
+        <strong>No.</strong> {{ site_name }} es una herramienta de apoyo. La información de catálogos pertenece a sus
+        titulares; debe verificarse contra el PDF oficial y las políticas de tu negocio o taller. No nos hacemos
+        responsables de decisiones de instalación o compra basadas únicamente en el resultado de una consulta.
+    </p>
+
+    <div class="legal-callout">
+        <p style="margin-bottom:0;">
+            ¿Dudas adicionales? <a href="mailto:{{ site_contact_email }}">{{ site_contact_email }}</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

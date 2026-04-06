@@ -1,0 +1,148 @@
+{% extends "legal_base.html" %}
+{% block title %}Aviso de privacidad{% endblock %}
+{% block meta_description %}Aviso de privacidad integral de {{ site_name }} conforme a la LFPDPPP: datos tratados, finalidades, derechos ARCO, transferencias y cookies.{% endblock %}
+
+{% block legal_body %}
+<div class="legal-prose">
+    <h1>Aviso de privacidad integral</h1>
+    <p>
+        En cumplimiento de la <strong>Ley Federal de Protección de Datos Personales en Posesión de los Particulares</strong>
+        («LFPDPPP»), su Reglamento y las disposiciones aplicables en México en 2026, el responsable del tratamiento de
+        datos personales es quien opera el Servicio de búsqueda comercializado bajo la marca <strong>{{ site_name }}</strong>
+        (en adelante, el «Responsable»), con actividades en territorio de los Estados Unidos Mexicanos.
+    </p>
+    <div class="legal-callout">
+        <p style="margin-bottom:0;">
+            <strong>Datos de contacto del Responsable (privacidad, ARCO y consultas):</strong><br>
+            Correo electrónico: <a href="mailto:{{ site_contact_email }}">{{ site_contact_email }}</a>
+        </p>
+    </div>
+
+    <h2 id="defensor">1. Defensor de datos personales</h2>
+    <p>
+        El Responsable designa como canal primario para el ejercicio de derechos y aclaraciones el correo
+        <a href="mailto:{{ site_contact_email }}">{{ site_contact_email }}</a>. Las solicitudes serán atendidas conforme a los
+        plazos legales y, en su caso, se requerirá acreditar la identidad del titular o del representante legal.
+    </p>
+
+    <h2 id="datos">2. Datos personales que tratamos</h2>
+    <p>Podemos tratar, según utilices el Servicio:</p>
+    <ul>
+        <li><strong>Identificación y contacto:</strong> nombre de usuario, nombre o denominación si la proporcionas, correo electrónico.</li>
+        <li><strong>Autenticación:</strong> contraseña (almacenada mediante técnicas de <em>hash</em> unidireccional; no conservamos tu contraseña en texto claro).</li>
+        <li><strong>Datos de transacción y facturación (a través de Stripe):</strong> identificadores de cliente (<em>customer</em>) y de suscripción, estado del pago en nuestro sistema (p. ej. activa, pendiente de pago o cancelada), tipo de plan contratado (mensual o anual) y la fecha de fin del periodo de facturación que sincronizamos desde Stripe mediante notificaciones seguras (<em>webhooks</em>), para prestarte el acceso acorde a tu suscripción. Pueden tratarse también últimos dígitos o marca de tarjeta cuando Stripe los muestre al Responsable en paneles de conciliación y soporte (no almacenamos el PAN completo en nuestros sistemas). Al iniciar el pago, Stripe puede recibir metadatos mínimos (p. ej. identificador interno de tu cuenta y plan elegible) para vincular el cobro con tu registro, conforme a la política de Stripe como encargado o contraparte en el tratamiento.</li>
+        <li><strong>Datos técnicos:</strong> dirección IP, tipo de navegador, registros de fecha/hora de acceso y eventos de seguridad, conservados por tiempos razonables para fines de seguridad, auditoría y mejora del Servicio.</li>
+        <li><strong>Consultas de búsqueda:</strong> el texto que ingresas para buscar en catálogos puede procesarse en nuestros servidores para ejecutar la consulta y mejorar la experiencia; no utilizamos esas consultas con fines publicitarios de terceros.</li>
+    </ul>
+
+    <h2 id="sensibles">3. Datos personales sensibles</h2>
+    <p>
+        El Servicio <strong>no</strong> está diseñado para solicitar datos catalogados como sensibles conforme a la LFPDPPP
+        (origen racial o étnico, estado de salud, preferencias sexuales, etc.). Te pedimos no incluirlos en formularios
+        ni en campos de búsqueda. Si los envías inadvertidamente, podrás solicitar su eliminación vía los derechos ARCO.
+    </p>
+
+    <h2 id="fines">4. Finalidades del tratamiento</h2>
+    <h3>4.1 Finalidades primarias (necesarias para la relación jurídica)</h3>
+    <ul>
+        <li>Crear y administrar tu Cuenta, autenticarte y permitir el acceso según tu plan (gratuito o de suscripción).</li>
+        <li>Procesar pagos, renovaciones, cancelaciones y conciliación con <strong>Stripe, Inc.</strong> y su infraestructura.</li>
+        <li>Cumplir obligaciones legales, fiscales o regulatorias aplicables en México.</li>
+        <li>Atender requerimientos de autoridades competentes conforme a la ley.</li>
+    </ul>
+    <h3>4.2 Finalidades secundarias (opcionales)</h3>
+    <ul>
+        <li>Enviarte comunicaciones sobre mejoras del Servicio, encuestas de satisfacción o información comercial relacionada con {{ site_name }}, cuando así lo permita la ley.</li>
+    </ul>
+    <p>
+        En caso de finalidades secundarias, puedes negar el tratamiento salvo que exista una relación previa que lo impida
+        conforme al artículo 28 de la LFPDPPP. La negativa no será motivo para dejar de prestar el Servicio contratado
+        cuando las finalidades primarias no se vean afectadas.
+    </p>
+
+    <h2 id="transferencias">5. Transferencias y encargados</h2>
+    <p>
+        Para operar el Servicio podemos utilizar proveedores que tratan datos en nuestro nombre («encargados») o que
+        reciben datos como parte de la prestación de su servicio. Destacan:
+    </p>
+    <ul>
+        <li><strong>Stripe, Inc.</strong> y afiliadas: procesamiento de pagos con tarjeta, gestión de suscripciones y,
+            cuando accedas desde el enlace del Servicio, la <strong>interfaz de autoservicio para clientes</strong>
+            (portal de facturación alojado por Stripe), donde puedes actualizar datos de facturación y descargar comprobantes
+            según las opciones habilitadas. Stripe puede tratar datos en Estados Unidos u otras jurisdicciones con
+            salvaguardas contractuales. Política de privacidad de Stripe:
+            <a href="https://stripe.com/mx/legal/privacy-center" rel="noopener noreferrer" target="_blank">stripe.com/mx/legal/privacy-center</a>.</li>
+        <li><strong>Proveedor de alojamiento (hosting)</strong> y base de datos donde se hospeda la información de cuenta y el índice de búsqueda.</li>
+    </ul>
+    <p>
+        Las transferencias distintas de las anteriores se llevarán a cabo solo si resultan necesarias para dar cumplimiento
+        a estos fines y previo cumplimiento de los supuestos previstos en la LFPDPPP, informándote cuando la ley lo exija.
+    </p>
+
+    <h2 id="arco">6. Derechos ARCO y medios para ejercerlos</h2>
+    <p>
+        Como titular tienes derecho de <strong>Acceso, Rectificación, Cancelación y Oposición</strong> (ARCO), así como a
+        limitar el uso o divulgación de tus datos y a revocar el consentimiento donde proceda, según la LFPDPPP.
+    </p>
+    <p>
+        Para ejercer derechos, envía una solicitud al correo
+        <a href="mailto:{{ site_contact_email }}">{{ site_contact_email }}</a> indicando al menos: (i) nombre del titular
+        y correo de contacto; (ii) documentos que acrediten identidad o representación legal; (iii) descripción clara
+        de la solicitud; (iv) cualquier dato que facilite la localización de la información.
+    </p>
+    <p>
+        El Responsable responderá en los plazos previstos por la ley e informará sobre la procedencia de la solicitud.
+        Si no quedas conforme, podrás acudir ante el <strong>Instituto Nacional de Transparencia, Acceso a la Información
+        y Protección de Datos Personales (INAI)</strong>:
+        <a href="https://www.inai.org.mx" rel="noopener noreferrer" target="_blank">inai.org.mx</a>.
+    </p>
+
+    <h2 id="revocacion">7. Revocación del consentimiento</h2>
+    <p>
+        Puedes revocar el consentimiento que nos hayas otorgado, cuando el tratamiento no tenga otra base jurídica que
+        lo justifique (por ejemplo, obligaciones legales). La revocación puede implicar que ya no podamos prestarte
+        determinadas funciones del Servicio.
+    </p>
+
+    <h2 id="cookies">8. Cookies y tecnologías similares</h2>
+    <p>
+        Utilizamos cookies y mecanismos de sesión necesarios para el funcionamiento seguro del Servicio, incluida la
+        autenticación («recordarme» cuando lo habilites) y la protección contra abusos. Puedes configurar tu navegador
+        para bloquear cookies; ello puede afectar el inicio de sesión o algunas funciones.
+    </p>
+
+    <h2 id="seguridad">9. Medidas de seguridad</h2>
+    <p>
+        Implementamos medidas administrativas, técnicas y físicas proporcionales al riesgo: cifrado en tránsito (HTTPS),
+        almacenamiento de contraseñas con algoritmos de <em>hash</em> fuertes, control de accesos, minimización de datos
+        y revisión de proveedores críticos. Ningún sistema es invulnerable; si detectamos un incidente que comprometa
+        tus datos personales te lo comunicaremos conforme a la ley.
+    </p>
+
+    <h2 id="conservacion">10. Conservación de datos</h2>
+    <p>
+        Conservamos los datos el tiempo necesario para cumplir las finalidades descritas y obligaciones legales
+        (incluidas fiscales y de defensa de derechos). Transcurrido ese plazo, los datos se bloquean o suprimen
+        conforme a nuestras políticas internas y la normativa aplicable.
+    </p>
+
+    <h2 id="menores">11. Menores de edad</h2>
+    <p>
+        El Servicio no está dirigido a menores de edad. No solicitamos datos de menores de forma intencionada. Si tienes
+        conocimiento de que un menor nos proporcionó datos, contáctanos para proceder a su eliminación cuando proceda.
+    </p>
+
+    <h2 id="cambios">12. Cambios al aviso de privacidad</h2>
+    <p>
+        Podemos actualizar este aviso para reflejar cambios legislativos, del Servicio o de nuestros proveedores.
+        Publicaremos la versión vigente en esta página con la fecha de última actualización. Cuando la ley exija tu
+        consentimiento expreso para cambios sustanciales, te lo solicitaremos por medios idóneos.
+    </p>
+
+    <h2 id="terminos-enlace">13. Relación con los Términos de uso</h2>
+    <p>
+        Este aviso complementa los <a href="{{ url_for('terminos') }}">Términos y condiciones de uso</a>, que regulan
+        la contratación y el acceso al Servicio.
+    </p>
+</div>
+{% endblock %}
