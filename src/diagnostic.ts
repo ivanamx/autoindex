@@ -2,9 +2,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 const pdfParse = require('pdf-parse');
 
-const PDF_DIR = "C:\\Users\\ivanam.PSSJotace\\nags\\pdfs";
+const PDF_DIR =
+  (process.env.PDF_DIR && process.env.PDF_DIR.trim()) ||
+  "C:\\Users\\ivanam.PSSJotace\\nags\\pdfs";
 
 async function diagnosticPDF() {
+  if (!fs.existsSync(PDF_DIR)) {
+    console.error(`❌ PDF_DIR no existe: ${PDF_DIR} (define PDF_DIR en .env)`);
+    return;
+  }
   const files = fs.readdirSync(PDF_DIR).filter(f => f.endsWith('.pdf'));
   
   if (files.length === 0) {

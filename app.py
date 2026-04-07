@@ -14,12 +14,14 @@ from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 from typing import Optional
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.getenv('SECRET_KEY', 'supersecretkey')
 app.config['REMEMBER_COOKIE_DURATION'] = 604800  # 7 días
 
@@ -81,7 +83,7 @@ def load_user(user_id):
         return User(*user)
     return None
 
-PDF_DIR = r"C:\Users\ivanam.PSSJotace\nags\pdfs"
+PDF_DIR = (os.getenv("PDF_DIR") or r"C:\Users\ivanam.PSSJotace\nags\pdfs").strip()
 
 # Búsqueda pública (sin login o sin suscripción activa): debe coincidir con
 # catalogo_nombre en BD (el indexador usa el nombre del PDF, ej. "NAGS 2025.pdf").

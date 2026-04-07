@@ -5,3 +5,4 @@ python-dotenv>=1.0.0
 Flask-Login>=0.6.3
 Flask-Bcrypt>=1.0.1
 stripe>=11.0.0
+gunicorn>=22.0.0

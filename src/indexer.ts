@@ -5,7 +5,17 @@ import { execSync } from 'child_process';
 import { Pool } from 'pg';
 const pdfParse = require('pdf-parse');
 
-const PDF_DIR = "C:\\Users\\ivanam.PSSJotace\\nags\\pdfs";
+const PDF_DIR =
+  (process.env.PDF_DIR && process.env.PDF_DIR.trim()) ||
+  "C:\\Users\\ivanam.PSSJotace\\nags\\pdfs";
+
+function resolveVenvPython(projectRoot: string): string {
+  const unix = path.join(projectRoot, "venv", "bin", "python");
+  const win = path.join(projectRoot, "venv", "Scripts", "python.exe");
+  if (fs.existsSync(unix)) return `"${unix}"`;
+  if (fs.existsSync(win)) return `"${win}"`;
+  return "python";
+}
 
 // Usar connection string del .env
 const pool = new Pool({
@@ -25,8 +35,7 @@ async function extractTextWithOCR(pdfPath: string, pageNumber: number): Promise<
     
     const projectRoot = path.resolve(__dirname, '..');
     const pythonScript = path.join(projectRoot, 'ocr_extractor.py');
-    const venvPython = path.join(projectRoot, 'venv', 'Scripts', 'python.exe');
-    const pythonCmd = fs.existsSync(venvPython) ? `"${venvPython}"` : 'python';
+    const pythonCmd = resolveVenvPython(projectRoot);
     
     if (!fs.existsSync(pythonScript)) {
       console.error(`   ❌ Script Python no encontrado`);
@@ -156,6 +165,10 @@ async function saveToDatabase(pages: PageData[], catalogoNombre: string) {
 }
 
 async function processPDFs() {
+  if (!fs.existsSync(PDF_DIR)) {
+    console.error(`❌ PDF_DIR no existe: ${PDF_DIR} (define PDF_DIR en .env)`);
+    process.exit(1);
+  }
   const files = fs.readdirSync(PDF_DIR).filter(f => f.endsWith('.pdf'));
   
   console.log(`\n🚀 Procesando ${files.length} PDFs...\n`);
