@@ -49,6 +49,7 @@ def inject_legal_context():
 MAX_DEVICE_SESSIONS_MONTHLY = 3
 MAX_DEVICE_SESSIONS_ANNUAL = 5
 MAX_DEVICE_SESSIONS_NON_ACTIVE = 3
+FREE_DAILY_SEARCH_LIMIT = 3
 
 
 # === USER MODEL ===
@@ -95,6 +96,33 @@ def has_full_catalog_access():
         current_user.is_authenticated
         and getattr(current_user, "subscription_status", None) == "active"
     )
+
+
+def _public_daily_search_stats() -> tuple[int, int]:
+    """Devuelve (consumidas_hoy, restantes_hoy) para modo gratis por sesión."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    usage = session.get("public_search_usage")
+
+    if not isinstance(usage, dict) or usage.get("day") != today:
+        usage = {"day": today, "count": 0}
+        session["public_search_usage"] = usage
+
+    raw_count = usage.get("count", 0)
+    count = raw_count if isinstance(raw_count, int) and raw_count >= 0 else 0
+    remaining = max(0, FREE_DAILY_SEARCH_LIMIT - count)
+    return count, remaining
+
+
+def _consume_public_daily_search() -> tuple[int, int]:
+    """Incrementa consumo diario en modo gratis y devuelve (consumidas, restantes)."""
+    count, _ = _public_daily_search_stats()
+    count += 1
+    session["public_search_usage"] = {
+        "day": datetime.now().strftime("%Y-%m-%d"),
+        "count": count,
+    }
+    session.modified = True
+    return count, max(0, FREE_DAILY_SEARCH_LIMIT - count)
 
 
 def _resolve_pdf_path(filename: str):
@@ -247,6 +275,213 @@ def _password_reset_url(token: str) -> str:
     if base:
         return base + url_for('reset_password', token=token)
     return url_for('reset_password', token=token, _external=True)
+
+
+def _unique_username_from_email(cur, email: str) -> str:
+    local = (email.split('@')[0] if '@' in email else email).lower()
+    base = re.sub(r'[^a-z0-9_-]', '', local)
+    if len(base) < 2:
+        base = 'usuario'
+    base = base[:50]
+    candidate = base
+    n = 0
+    while True:
+        cur.execute('SELECT 1 FROM users WHERE username = %s', (candidate,))
+        if cur.fetchone() is None:
+            return candidate
+        n += 1
+        suffix = f'_{n}'
+        max_base = 50 - len(suffix)
+        candidate = (base[:max_base] if max_base > 0 else 'u') + suffix
+
+
+def _checkout_email_from_session(sess: dict) -> str:
+    details = sess.get('customer_details') or {}
+    raw = details.get('email') or sess.get('customer_email') or ''
+    email = (raw or '').strip().lower()
+    if email:
+        return email
+    cust_id = sess.get('customer')
+    if not cust_id:
+        return ''
+    try:
+        cust = stripe.Customer.retrieve(cust_id)
+        return (cust.get('email') or '').strip().lower()
+    except stripe.StripeError as e:
+        print('pay_first: Stripe customer retrieve:', e)
+        return ''
+
+
+def _pay_first_sync_user_from_session(session_obj: dict) -> Optional[int]:
+    """
+    Crea o actualiza el usuario tras checkout pay_first (idempotente).
+    Usuario y contraseña definitivos se definen en /completar-cuenta.
+    """
+    meta = session_obj.get('metadata') or {}
+    if (meta.get('flow') or '').strip().lower() != 'pay_first':
+        return None
+    plan_raw = (meta.get('plan') or '').strip().lower()
+    plan = plan_raw if plan_raw in ('monthly', 'annual') else 'monthly'
+    customer_id = session_obj.get('customer')
+    subscription_id = session_obj.get('subscription')
+    email = _checkout_email_from_session(session_obj)
+    if not email and session_obj.get('id'):
+        try:
+            expanded = stripe.checkout.Session.retrieve(
+                session_obj['id'],
+                expand=['customer'],
+            )
+            email = _checkout_email_from_session(expanded)
+        except stripe.StripeError as e:
+            print('pay_first: no se pudo recuperar la sesión', e)
+    if not email:
+        print('pay_first: sin email en sesión de checkout', session_obj.get('id'))
+        return None
+    if not subscription_id:
+        print('pay_first: sin subscription id', session_obj.get('id'))
+        return None
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    uid: Optional[int] = None
+    try:
+        cur.execute(
+            'SELECT id FROM users WHERE stripe_subscription_id = %s',
+            (subscription_id,),
+        )
+        row_sub = cur.fetchone()
+        if row_sub:
+            uid = row_sub[0]
+            cur.execute(
+                """
+                UPDATE users SET subscription_status = %s,
+                    stripe_customer_id = COALESCE(%s, stripe_customer_id),
+                    subscription_plan = COALESCE(%s, subscription_plan)
+                WHERE id = %s
+                """,
+                ('active', customer_id, plan, uid),
+            )
+        else:
+            cur.execute(
+                'SELECT id FROM users WHERE email = %s',
+                (email,),
+            )
+            row = cur.fetchone()
+            if row:
+                uid = row[0]
+                cur.execute(
+                    """
+                    UPDATE users SET subscription_status = %s,
+                        stripe_customer_id = COALESCE(%s, stripe_customer_id),
+                        stripe_subscription_id = %s,
+                        subscription_plan = COALESCE(%s, subscription_plan)
+                    WHERE id = %s
+                    """,
+                    ('active', customer_id, subscription_id, plan, uid),
+                )
+            else:
+                provisional_username = _unique_username_from_email(cur, email)
+                cur.execute(
+                    """
+                    INSERT INTO users (
+                        username, email, password_hash, subscription_status,
+                        stripe_customer_id, stripe_subscription_id, subscription_plan
+                    )
+                    VALUES (%s, %s, NULL, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (provisional_username, email, 'active', customer_id, subscription_id, plan),
+                )
+                uid = cur.fetchone()[0]
+
+        conn.commit()
+    except pg_errors.UniqueViolation:
+        conn.rollback()
+        cur.execute(
+            'SELECT id FROM users WHERE stripe_subscription_id = %s OR email = %s',
+            (subscription_id, email),
+        )
+        row = cur.fetchone()
+        if row:
+            uid = row[0]
+            cur.execute(
+                """
+                UPDATE users SET subscription_status = %s,
+                    stripe_customer_id = COALESCE(%s, stripe_customer_id),
+                    stripe_subscription_id = COALESCE(%s, stripe_subscription_id),
+                    subscription_plan = COALESCE(%s, subscription_plan)
+                WHERE id = %s
+                """,
+                ('active', customer_id, subscription_id, plan, uid),
+            )
+            conn.commit()
+        else:
+            conn.rollback()
+    except Exception as e:
+        conn.rollback()
+        print('pay_first checkout DB error:', e)
+        raise
+    finally:
+        try:
+            if cur and not cur.closed:
+                cur.close()
+            if conn and not conn.closed:
+                conn.close()
+        except Exception:
+            pass
+
+    if uid is None:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                'SELECT id FROM users WHERE stripe_subscription_id = %s',
+                (subscription_id,),
+            )
+            r3 = cur.fetchone()
+            if r3:
+                uid = r3[0]
+        finally:
+            cur.close()
+            conn.close()
+
+    if uid is not None:
+        _enforce_device_session_cap(uid)
+    return uid
+
+
+def _stripe_pay_first_checkout_completed(session_obj: dict):
+    """Webhook: sincroniza usuario pay_first (sin correo; completar datos en el sitio)."""
+    _pay_first_sync_user_from_session(session_obj)
+
+
+def _retrieve_pay_first_checkout_session(session_id: str):
+    """Sesión Stripe: pay_first + suscripción (aún sin exigir pago confirmado)."""
+    if not session_id or not stripe.api_key:
+        return None
+    try:
+        sess = stripe.checkout.Session.retrieve(session_id.strip(), expand=['customer'])
+    except stripe.StripeError:
+        return None
+    meta = sess.get('metadata') or {}
+    if (meta.get('flow') or '').strip().lower() != 'pay_first':
+        return None
+    if sess.get('mode') != 'subscription':
+        return None
+    return sess
+
+
+def _checkout_session_payment_ready(sess: dict) -> bool:
+    ps = sess.get('payment_status')
+    return ps in ('paid', 'no_payment_required')
+
+
+def _verify_pay_first_checkout_session(session_id: str):
+    """Sesión pay_first con pago confirmado en Stripe."""
+    sess = _retrieve_pay_first_checkout_session(session_id)
+    if not sess or not _checkout_session_payment_ready(sess):
+        return None
+    return sess
 
 
 def _price_id_for_plan(plan: str):
@@ -470,6 +705,10 @@ _SKIP_DEVICE_SESSION_ENDPOINTS = frozenset(
         'preguntas_frecuentes',
         'register',
         'api_register_checkout',
+        'api_checkout_pay_first_monthly',
+        'completar_cuenta',
+        'api_completar_cuenta_poll',
+        'api_subscription_success_poll',
     }
 )
 
@@ -502,6 +741,9 @@ def _require_registered_device_session():
 
 def _stripe_handle_checkout_completed(session: dict):
     meta = session.get('metadata') or {}
+    if (meta.get('flow') or '').strip().lower() == 'pay_first':
+        _stripe_pay_first_checkout_completed(session)
+        return
     user_id = meta.get('user_id')
     if not user_id:
         return
@@ -529,6 +771,76 @@ def _stripe_handle_checkout_completed(session: dict):
     cur.close()
     conn.close()
     _enforce_device_session_cap(uid)
+
+
+def _login_user_from_db_row_after_payment(uid: int):
+    """Tras pago verificado: inicia sesión Flask + sesión de dispositivo."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT id, username, email, password_hash, subscription_status, subscription_plan
+        FROM users WHERE id = %s
+        """,
+        (uid,),
+    )
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row or not row[3]:
+        flash('Tu cuenta se está activando. En unos segundos puedes iniciar sesión.')
+        return redirect(url_for('login'))
+    user_obj = User(*row)
+    login_user(user_obj, remember=True)
+    try:
+        _register_device_session(
+            user_obj.id,
+            user_obj.subscription_plan,
+            user_obj.subscription_status,
+            True,
+            request.headers.get('User-Agent'),
+        )
+    except Exception as exc:
+        print('autologin device session:', exc)
+        session.pop('device_token', None)
+        logout_user()
+        flash('El pago se registró, pero no pudimos iniciar sesión automáticamente. Entra manualmente.')
+        return redirect(url_for('login'))
+    flash('¡Bienvenido! Ya tienes acceso completo.')
+    return redirect(url_for('index'))
+
+
+def _try_autologin_from_checkout_session_id(session_id: str):
+    """
+    Verifica session_id con Stripe, sincroniza suscripción (flujo registro / checkout-monthly)
+    y deja al usuario logueado. pay_first → redirige a completar-cuenta.
+    Devuelve Response o None si no aplica autologin.
+    """
+    sid = (session_id or '').strip()
+    if not sid or not stripe.api_key:
+        return None
+    try:
+        sess = stripe.checkout.Session.retrieve(sid, expand=['customer'])
+    except stripe.StripeError:
+        return None
+
+    meta = sess.get('metadata') or {}
+    if (meta.get('flow') or '').strip().lower() == 'pay_first':
+        return redirect(url_for('completar_cuenta', session_id=sid))
+
+    if not _checkout_session_payment_ready(sess):
+        return None
+
+    user_id = meta.get('user_id')
+    if not user_id:
+        return None
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        return None
+
+    _stripe_handle_checkout_completed(sess)
+    return _login_user_from_db_row_after_payment(uid)
 
 
 def _stripe_handle_subscription_updated(sub: dict):
@@ -588,10 +900,13 @@ def _stripe_handle_subscription_deleted(sub: dict):
 def index():
     show_public_banner = not has_full_catalog_access()
     open_register = request.args.get('open_register')
+    _, free_remaining = _public_daily_search_stats()
     return render_template(
         'index.html',
         show_public_banner=show_public_banner,
         open_register=open_register,
+        free_daily_limit=FREE_DAILY_SEARCH_LIMIT,
+        free_remaining_searches=free_remaining,
     )
 
 
@@ -737,8 +1052,20 @@ def search():
             catalogo = seleccionar_catalogo(year)
             if not catalogo:
                 return jsonify({'error': f'No hay catálogo para el año {year}'}), 404
+            remaining_free_searches = None
         else:
             catalogo = PUBLIC_CATALOGO_NOMBRE
+            _, remaining = _public_daily_search_stats()
+            if remaining <= 0:
+                return jsonify({
+                    'error': (
+                        f'Has alcanzado el límite diario de {FREE_DAILY_SEARCH_LIMIT} búsquedas '
+                        'en la versión gratis. Activa tu suscripción para búsquedas ilimitadas.'
+                    ),
+                    'remaining_free_searches': 0,
+                    'daily_free_limit': FREE_DAILY_SEARCH_LIMIT,
+                }), 429
+            _, remaining_free_searches = _consume_public_daily_search()
 
         # Priorizamos modelo (todo excepto primera palabra) por encima de marca
         primary_terms = terms[1:] if len(terms) > 1 else terms
@@ -903,7 +1230,9 @@ def search():
                 'marca': marca or '',
                 'modelo': modelo or '',
                 'search_strategy': search_strategy,
-                'search_terms': terms
+                'search_terms': terms,
+                'remaining_free_searches': remaining_free_searches,
+                'daily_free_limit': FREE_DAILY_SEARCH_LIMIT if not has_full_catalog_access() else None,
             })
 
         best = ranked_results[0]
@@ -938,7 +1267,9 @@ def search():
             'score_compact': round(float(score_compact), 6),
             'top_matches': candidates,
             'message': f'Encontrado en página {page}',
-            'preview': texto[:200] + '...' if len(texto) > 200 else texto
+            'preview': texto[:200] + '...' if len(texto) > 200 else texto,
+            'remaining_free_searches': remaining_free_searches,
+            'daily_free_limit': FREE_DAILY_SEARCH_LIMIT if not has_full_catalog_access() else None,
         })
 
     except Exception as e:
@@ -958,7 +1289,13 @@ def serve_pdf_file(pdf_name, page):
     print(f"✅ Abriendo PDF: {pdf_path} en página {page}")
     match_year = re.search(r"(19\d{2}|20\d{2})", pdf_name)
     year = int(match_year.group(1)) if match_year else 0
-    return render_template("viewer.html", pdf_name=pdf_name, page=page, year=year)
+    return render_template(
+        "viewer.html",
+        pdf_name=pdf_name,
+        page=page,
+        year=year,
+        can_navigate_catalog=has_full_catalog_access(),
+    )
 
 def _dashboard_require_active():
     if current_user.subscription_status != 'active':
@@ -1167,6 +1504,13 @@ def login():
         cur.close()
         conn.close()
 
+        if user and not user[3]:
+            flash(
+                'Tu cuenta aún no tiene contraseña. Revisa tu correo (y spam) por el mensaje '
+                '«Activa tu cuenta» tras tu pago, o usa «Olvidé mi contraseña» con el mismo email.'
+            )
+            return redirect(url_for('login'))
+
         if user and bcrypt.check_password_hash(user[3], password):
             user_obj = User(*user)
             remember = True if request.form.get('remember') == 'on' else False
@@ -1347,6 +1691,180 @@ def register():
     return redirect(url_for('index', open_register='1'))
 
 
+@app.route('/api/completar-cuenta-poll', methods=['GET'])
+def api_completar_cuenta_poll():
+    """Estado del pago para reintentos en /completar-cuenta (JSON)."""
+    if not stripe.api_key:
+        return jsonify({'status': 'invalid'}), 503
+
+    session_id = (request.args.get('session_id') or '').strip()
+    sess = _retrieve_pay_first_checkout_session(session_id)
+    if not sess:
+        return jsonify({'status': 'invalid'})
+    if _checkout_session_payment_ready(sess):
+        return jsonify({'status': 'ready'})
+    return jsonify({'status': 'pending'})
+
+
+@app.route('/api/subscription-success-poll', methods=['GET'])
+def api_subscription_success_poll():
+    """Estado del pago para autologin en /subscription/success (registro / checkout mensual)."""
+    if not stripe.api_key:
+        return jsonify({'status': 'invalid'}), 503
+
+    session_id = (request.args.get('session_id') or '').strip()
+    if not session_id:
+        return jsonify({'status': 'invalid'})
+    try:
+        sess = stripe.checkout.Session.retrieve(session_id, expand=['customer'])
+    except stripe.StripeError:
+        return jsonify({'status': 'invalid'})
+
+    if sess.get('mode') != 'subscription':
+        return jsonify({'status': 'invalid'})
+
+    meta = sess.get('metadata') or {}
+    if (meta.get('flow') or '').strip().lower() == 'pay_first':
+        return jsonify({'status': 'pay_first'})
+
+    if _checkout_session_payment_ready(sess):
+        if meta.get('user_id'):
+            return jsonify({'status': 'ready'})
+        return jsonify({'status': 'invalid'})
+
+    return jsonify({'status': 'pending'})
+
+
+@app.route('/completar-cuenta', methods=['GET', 'POST'])
+def completar_cuenta():
+    """Tras pagar desde el modal de límite (pay-first): usuario y contraseña (email viene de Stripe)."""
+    if not stripe.api_key:
+        flash('El servicio de pagos no está configurado.')
+        return redirect(url_for('index'))
+
+    session_id = (request.values.get('session_id') or '').strip()
+    if request.method == 'POST':
+        session_id = (request.form.get('session_id') or '').strip()
+
+    if not session_id:
+        flash('Enlace inválido.')
+        return redirect(url_for('index'))
+
+    sess = _retrieve_pay_first_checkout_session(session_id)
+    if not sess:
+        flash('Enlace inválido o sesión expirada.')
+        return redirect(url_for('index'))
+
+    if not _checkout_session_payment_ready(sess):
+        if request.method == 'POST':
+            flash('Tu pago aún se está confirmando. Espera unos segundos en esta pantalla.')
+            return redirect(url_for('completar_cuenta', session_id=session_id))
+        email_hint = (_checkout_email_from_session(sess) or '').strip()
+        return render_template(
+            'completar_cuenta.html',
+            waiting_payment=True,
+            session_id=session_id,
+            email_hint=email_hint,
+        )
+
+    uid = _pay_first_sync_user_from_session(sess)
+    if not uid:
+        flash('No pudimos preparar tu cuenta. Si el cargo apareció en tu tarjeta, escríbenos con el email de pago.')
+        return redirect(url_for('index'))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        'SELECT email, username, password_hash FROM users WHERE id = %s',
+        (uid,),
+    )
+    urow = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not urow:
+        flash('Cuenta no encontrada.')
+        return redirect(url_for('index'))
+    email, username_provisional, pwd_hash = urow[0], urow[1], urow[2]
+
+    if pwd_hash:
+        return _login_user_from_db_row_after_payment(uid)
+
+    error = None
+    if request.method == 'POST':
+        new_user = (request.form.get('username') or '').strip()
+        password = request.form.get('password') or ''
+        password2 = request.form.get('password2') or ''
+
+        if len(new_user) < 2:
+            error = 'El usuario debe tener al menos 2 caracteres.'
+        elif len(new_user) > 80:
+            error = 'El usuario es demasiado largo.'
+        elif not re.match(r'^[a-zA-Z0-9_-]+$', new_user):
+            error = 'Usuario: solo letras, números, guión y guión bajo.'
+        elif len(password) < 8:
+            error = 'La contraseña debe tener al menos 8 caracteres.'
+        elif password != password2:
+            error = 'Las contraseñas no coinciden.'
+        else:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    'SELECT id FROM users WHERE lower(username) = lower(%s) AND id != %s',
+                    (new_user, uid),
+                )
+                if cur.fetchone():
+                    error = 'Ese nombre de usuario ya está en uso.'
+                else:
+                    hashed = bcrypt.generate_password_hash(password).decode('utf-8')
+                    cur.execute(
+                        """
+                        UPDATE users SET username = %s, password_hash = %s,
+                            password_reset_token_hash = NULL,
+                            password_reset_expires_at = NULL,
+                            password_reset_used_at = NULL
+                        WHERE id = %s AND password_hash IS NULL
+                        RETURNING id
+                        """,
+                        (new_user, hashed, uid),
+                    )
+                    if not cur.fetchone():
+                        conn.rollback()
+                        cur.execute(
+                            """
+                            SELECT id, username, email, password_hash, subscription_status, subscription_plan
+                            FROM users WHERE id = %s
+                            """,
+                            (uid,),
+                        )
+                        row_done = cur.fetchone()
+                        conn.commit()
+                        if row_done and row_done[3]:
+                            return _login_user_from_db_row_after_payment(uid)
+                        flash('Tu cuenta ya fue activada. Inicia sesión.')
+                        return redirect(url_for('login'))
+                    conn.commit()
+                    return _login_user_from_db_row_after_payment(uid)
+            finally:
+                cur.close()
+                conn.close()
+
+    username_value = (
+        (request.form.get('username') or '').strip()
+        if request.method == 'POST' and error
+        else username_provisional
+    )
+
+    return render_template(
+        'completar_cuenta.html',
+        waiting_payment=False,
+        session_id=session_id,
+        email=email,
+        username_value=username_value,
+        error=error,
+    )
+
+
 @app.route('/api/register-checkout', methods=['POST'])
 def api_register_checkout():
     """Crea usuario (pendiente de pago) y devuelve URL de Stripe Checkout (suscripción)."""
@@ -1425,6 +1943,86 @@ def api_register_checkout():
     return jsonify({'checkout_url': checkout_session.url})
 
 
+@app.route('/api/checkout-pay-first-monthly', methods=['POST'])
+def api_checkout_pay_first_monthly():
+    """Invitado: Checkout mensual sin registro previo; tras pagar completa usuario/contraseña en /completar-cuenta."""
+    if not stripe.api_key:
+        return jsonify({'error': 'Configura STRIPE_SECRET_KEY en el entorno.'}), 503
+
+    price_id = _price_id_for_plan('monthly')
+    if not price_id:
+        return jsonify({'error': 'Configura STRIPE_PRICE_MONTHLY (Price ID de Stripe).'}), 503
+
+    base = _absolute_base_url()
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            mode='subscription',
+            line_items=[{'price': price_id, 'quantity': 1}],
+            success_url=base + '/completar-cuenta?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=base + '/?limit_checkout_canceled=1',
+            metadata={'flow': 'pay_first', 'plan': 'monthly'},
+            subscription_data={
+                'metadata': {'plan': 'monthly', 'flow': 'pay_first'},
+            },
+        )
+    except stripe.StripeError as e:
+        return jsonify({'error': getattr(e, 'user_message', None) or str(e)}), 502
+
+    return jsonify({'checkout_url': checkout_session.url})
+
+
+@app.route('/api/checkout-monthly', methods=['POST'])
+@login_required
+def api_checkout_monthly():
+    """Usuario ya registrado sin suscripción activa: Checkout Stripe plan mensual."""
+    if not stripe.api_key:
+        return jsonify({'error': 'Configura STRIPE_SECRET_KEY en el entorno.'}), 503
+    if current_user.subscription_status == 'active':
+        return jsonify({'error': 'Tu suscripción ya está activa.'}), 400
+
+    price_id = _price_id_for_plan('monthly')
+    if not price_id:
+        return jsonify({'error': 'Configura STRIPE_PRICE_MONTHLY (Price ID de Stripe).'}), 503
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT email, stripe_customer_id FROM users WHERE id = %s",
+        (current_user.id,),
+    )
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row:
+        return jsonify({'error': 'Usuario no encontrado.'}), 404
+
+    email, stripe_customer_id = row[0], row[1]
+    base = _absolute_base_url()
+    uid = current_user.id
+    try:
+        payload = {
+            'mode': 'subscription',
+            'line_items': [{'price': price_id, 'quantity': 1}],
+            'success_url': base + '/subscription/success?session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url': base + '/?limit_checkout_canceled=1',
+            'client_reference_id': str(uid),
+            'metadata': {'user_id': str(uid), 'plan': 'monthly'},
+            'subscription_data': {
+                'metadata': {'user_id': str(uid), 'plan': 'monthly'},
+            },
+        }
+        scid = (stripe_customer_id or '').strip()
+        if scid:
+            payload['customer'] = scid
+        else:
+            payload['customer_email'] = (email or '').strip().lower()
+        checkout_session = stripe.checkout.Session.create(**payload)
+    except stripe.StripeError as e:
+        return jsonify({'error': getattr(e, 'user_message', None) or str(e)}), 502
+
+    return jsonify({'checkout_url': checkout_session.url})
+
+
 @app.route('/webhooks/stripe', methods=['POST'])
 def stripe_webhook():
     wh_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
@@ -1458,7 +2056,16 @@ def stripe_webhook():
 
 @app.route('/subscription/success')
 def subscription_success():
-    return render_template('subscription_success.html')
+    session_id = (request.args.get('session_id') or '').strip()
+    auto = _try_autologin_from_checkout_session_id(session_id)
+    if auto is not None:
+        return auto
+    from_poll = (request.args.get('from_poll') or '').strip() == '1'
+    return render_template(
+        'subscription_success.html',
+        session_id=session_id or None,
+        from_poll=from_poll,
+    )
 
 
 @app.route('/logout')

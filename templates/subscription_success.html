@@ -17,20 +17,30 @@
       padding: 20px;
     }
     .container {
-      background: rgba(15, 23, 42, 0.8);
+      background: rgba(15, 23, 42, 0.88);
       backdrop-filter: blur(20px);
-      border: 1px solid rgba(255,255,255,0.05);
-      padding: 40px;
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 40px 32px;
       border-radius: 20px;
-      max-width: 420px;
+      max-width: 440px;
       text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
     }
-    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; line-height: 1.35; color: #f8fafc; }
-    p.sub { color: #9ca3af; font-size: 0.9rem; line-height: 1.5; margin-bottom: 24px; }
-    a {
+    h1 { font-size: 1.22rem; font-weight: 600; margin-bottom: 12px; line-height: 1.35; color: #f8fafc; }
+    p.sub { color: #94a3b8; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px; }
+    .wait-spinner {
+      width: 46px;
+      height: 46px;
+      border: 3px solid rgba(255, 255, 255, 0.08);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 18px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn {
       display: inline-block;
-      padding: 12px 24px;
+      padding: 12px 22px;
       border-radius: 10px;
       border: none;
       background: linear-gradient(135deg, #38bdf8, #0ea5e9);
@@ -38,27 +48,147 @@
       font-weight: 500;
       text-decoration: none;
       transition: 0.2s;
+      margin: 6px 4px 0;
+      font-size: 0.9rem;
     }
-    a:hover {
+    .btn:hover {
       transform: translateY(-1px);
       box-shadow: 0 10px 25px rgba(56,189,248,0.3);
     }
+    .btn-secondary {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+    .error-box {
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.25);
+      color: #fecaca;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      line-height: 1.45;
+      margin-bottom: 18px;
+      text-align: left;
+    }
+    .actions { margin-top: 8px; }
   </style>
 </head>
-<body data-login-url="{{ url_for('login') }}">
+<body>
   <div class="container">
-    <h1>Gracias, ya puedes iniciar sesión</h1>
-    <p class="sub" id="redirectHint">Redirigiendo automáticamente a inicio de sesión…</p>
-    <a href="{{ url_for('login') }}">Ir a iniciar sesión ahora</a>
+    {% if session_id and from_poll %}
+    <h1>Casi listo: entra manualmente</h1>
+    <p class="sub">
+      El pago ya está confirmado en Stripe, pero no pudimos abrir tu sesión automáticamente
+      (por ejemplo, límite de dispositivos o una incidencia temporal). Inicia sesión con el
+      <strong>usuario o correo</strong> que usaste al registrarte.
+    </p>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('login') }}">Iniciar sesión</a>
+      <a class="btn btn-secondary" href="{{ url_for('index') }}">Ir al inicio</a>
+    </div>
+    <p class="sub" style="margin-top:18px;font-size:0.8rem;">
+      ¿Necesitas ayuda? <a href="mailto:{{ site_contact_email }}" style="color:#38bdf8;">{{ site_contact_email }}</a>
+    </p>
+    {% elif session_id %}
+    <div id="pollBox">
+      <h1>Confirmando tu pago…</h1>
+      <p class="sub" id="pollSub">
+        Stripe está confirmando el cobro. Esto suele tardar solo unos segundos;
+        reintentamos automáticamente para abrir tu sesión.
+      </p>
+      <div class="wait-spinner" aria-hidden="true"></div>
+      <p class="sub" style="margin-bottom:0;font-size:0.82rem;color:#64748b;">
+        No cierres esta pestaña.
+      </p>
+    </div>
+    <div id="failBox" style="display: none;">
+      <h1 id="failTitle">Sigue en proceso o hubo un problema</h1>
+      <p class="sub" id="failText"></p>
+      <div class="actions">
+        <a class="btn" href="{{ url_for('login') }}">Iniciar sesión</a>
+        <a class="btn btn-secondary" href="{{ url_for('index') }}">Ir al inicio</a>
+      </div>
+      <p class="sub" style="margin-top:18px;font-size:0.8rem;">
+        ¿El cargo ya apareció y no entras? Escríbenos a
+        <a href="mailto:{{ site_contact_email }}" style="color:#38bdf8;">{{ site_contact_email }}</a>
+      </p>
+    </div>
+    <script>
+      (function () {
+        var sessionId = {{ session_id|tojson }};
+        var pollBase = {{ url_for('api_subscription_success_poll')|tojson }};
+        var successUrl = {{ url_for('subscription_success')|tojson }}
+          + '?session_id=' + encodeURIComponent(sessionId)
+          + '&from_poll=1';
+        var completarUrl = {{ url_for('completar_cuenta')|tojson }} + '?session_id=' + encodeURIComponent(sessionId);
+        var indexUrl = {{ url_for('index')|tojson }};
+        var deadline = Date.now() + 6 * 60 * 1000;
+        var pollBox = document.getElementById('pollBox');
+        var failBox = document.getElementById('failBox');
+        var failText = document.getElementById('failText');
+        var failTitle = document.getElementById('failTitle');
+
+        function showFail(title, text) {
+          if (pollBox) pollBox.style.display = 'none';
+          if (failTitle) failTitle.textContent = title;
+          if (failText) failText.textContent = text;
+          if (failBox) failBox.style.display = 'block';
+        }
+
+        function poll() {
+          if (Date.now() > deadline) {
+            showFail(
+              'Está tardando más de lo habitual',
+              'Puedes iniciar sesión con el usuario o correo que usaste al registrarte. Si el pago ya figura en Stripe, tu acceso debería estar activo en breve.'
+            );
+            return;
+          }
+          fetch(pollBase + '?session_id=' + encodeURIComponent(sessionId), { credentials: 'same-origin' })
+            .then(function (r) {
+              if (r.status === 503) return { status: 'invalid' };
+              return r.json();
+            })
+            .then(function (data) {
+              if (!data) return setTimeout(poll, 3000);
+              if (data.status === 'ready') {
+                window.location.href = successUrl;
+                return;
+              }
+              if (data.status === 'pay_first') {
+                window.location.href = completarUrl;
+                return;
+              }
+              if (data.status === 'invalid') {
+                showFail(
+                  'No pudimos validar esta sesión',
+                  'El enlace puede haber expirado o no corresponde a este flujo. Prueba iniciar sesión o vuelve al inicio.'
+                );
+                return;
+              }
+              setTimeout(poll, 2500);
+            })
+            .catch(function () {
+              setTimeout(poll, 3500);
+            });
+        }
+        setTimeout(poll, 500);
+      })();
+    </script>
+    {% else %}
+    <h1>Seguimos desde aquí</h1>
+    <p class="sub">
+      No encontramos el identificador de la sesión de pago en el enlace.
+      Si acabas de pagar en Stripe, usa el botón <strong>«Volver al sitio»</strong> en su pantalla de confirmación,
+      o entra con tu usuario y contraseña.
+    </p>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('login') }}">Iniciar sesión</a>
+      <a class="btn btn-secondary" href="{{ url_for('index') }}">Ir al inicio</a>
+    </div>
+    <p class="sub" style="margin-top:18px;font-size:0.8rem;">
+      Soporte: <a href="mailto:{{ site_contact_email }}" style="color:#38bdf8;">{{ site_contact_email }}</a>
+    </p>
+    {% endif %}
   </div>
-  <script>
-    (function () {
-      var loginUrl = document.body.getAttribute('data-login-url');
-      if (!loginUrl) return;
-      window.setTimeout(function () {
-        window.location.href = loginUrl;
-      }, 3500);
-    })();
-  </script>
 </body>
 </html>

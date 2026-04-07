@@ -442,7 +442,7 @@
         }
     </style>
 </head>
-<body data-page="{{ page }}" data-pdf-name="{{ pdf_name }}">
+<body data-page="{{ page }}" data-pdf-name="{{ pdf_name }}" data-can-navigate="{% if can_navigate_catalog %}1{% else %}0{% endif %}">
     <header class="viewer-page-header" role="banner">
         <div class="viewer-page-header-inner">
             <h1 class="viewer-doc-title">{{ pdf_name }}</h1>
@@ -454,6 +454,7 @@
     </header>
 
     <div class="viewer-toolbar" role="toolbar" aria-label="Controles del PDF">
+        {% if can_navigate_catalog %}
         <button id="prev-btn" type="button" aria-label="Página anterior">Anterior</button>
         <button id="next-btn" type="button" aria-label="Página siguiente">Siguiente</button>
         <div class="sep"></div>
@@ -461,6 +462,9 @@
         <input id="page-input" type="number" min="1" value="{{ page }}">
         <button id="go-btn" type="button">Ir</button>
         <span id="page-total" class="status">de -</span>
+        {% else %}
+        <span class="status">Versión gratis: 1 página por búsqueda</span>
+        {% endif %}
         <div class="sep"></div>
         <button id="zoom-out-btn" type="button">-</button>
         <span id="zoom-label" class="status">197%</span>
@@ -501,6 +505,7 @@
         applyViewportMode();
 
         const startPage = parseInt(document.body.dataset.page, 10) || 1;
+        const canNavigateCatalog = document.body.dataset.canNavigate === "1";
         const isMobileView = window.matchMedia("(max-width: 768px)").matches;
         const pdfName = document.body.dataset.pdfName;
         const pdfUrl = `/catalogo-pdf/${encodeURIComponent(pdfName)}`;
@@ -549,10 +554,10 @@
 
         function updateToolbar() {
             if (!pdfDoc) return;
-            prevBtn.disabled = currentPage <= 1;
-            nextBtn.disabled = currentPage >= pdfDoc.numPages;
-            pageInput.value = currentPage;
-            pageTotal.textContent = `de ${pdfDoc.numPages}`;
+            if (prevBtn) prevBtn.disabled = currentPage <= 1;
+            if (nextBtn) nextBtn.disabled = currentPage >= pdfDoc.numPages;
+            if (pageInput) pageInput.value = currentPage;
+            if (pageTotal) pageTotal.textContent = `de ${pdfDoc.numPages}`;
             badgePage.textContent = `Página ${currentPage}`;
             zoomLabel.textContent = `${Math.round(currentScale * 100)}%`;
         }
@@ -702,14 +707,16 @@
             pinchActive = false;
         });
 
-        prevBtn.addEventListener("click", () => goToPage(currentPage - 1));
-        nextBtn.addEventListener("click", () => goToPage(currentPage + 1));
-        goBtn.addEventListener("click", () => goToPage(pageInput.value));
-        pageInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                goToPage(pageInput.value);
-            }
-        });
+        if (canNavigateCatalog && prevBtn && nextBtn && goBtn && pageInput) {
+            prevBtn.addEventListener("click", () => goToPage(currentPage - 1));
+            nextBtn.addEventListener("click", () => goToPage(currentPage + 1));
+            goBtn.addEventListener("click", () => goToPage(pageInput.value));
+            pageInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    goToPage(pageInput.value);
+                }
+            });
+        }
 
         zoomOutBtn.addEventListener("click", () => setScale(currentScale - zoomStep));
         zoomInBtn.addEventListener("click", () => setScale(currentScale + zoomStep));

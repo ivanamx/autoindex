@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Completar cuenta</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body {
+      background: radial-gradient(circle at top, #0f172a, #020617);
+      color: #e5e7eb;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 36px 32px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+    }
+    h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-align: center;
+      color: #f8fafc;
+    }
+    .lead {
+      font-size: 0.88rem;
+      color: #94a3b8;
+      text-align: center;
+      line-height: 1.45;
+      margin-bottom: 22px;
+    }
+    .email-box {
+      font-size: 0.85rem;
+      color: #bae6fd;
+      text-align: center;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      margin-bottom: 20px;
+      word-break: break-all;
+    }
+    .input-group { margin-bottom: 14px; }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      color: #fff;
+      outline: none;
+      transition: 0.2s;
+    }
+    input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56,189,248,0.2);
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: 0.2s;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px rgba(56,189,248,0.3);
+    }
+    .error {
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid rgba(255,0,0,0.2);
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+      color: #fecaca;
+    }
+    .hint {
+      margin-top: 18px;
+      font-size: 0.78rem;
+      color: #64748b;
+      text-align: center;
+      line-height: 1.45;
+    }
+    .hint a { color: #38bdf8; }
+
+    .wait-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(255, 255, 255, 0.08);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .wait-status {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+    .wait-sub {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #64748b;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    {% if waiting_payment %}
+    <h1>Procesando…</h1>
+    <p class="lead">Confirmando tu pago con Stripe. Suele tardar solo unos segundos.</p>
+    <div class="wait-spinner" aria-hidden="true"></div>
+    <p class="wait-status" id="waitStatus">Esperando confirmación del pago…</p>
+    {% if email_hint %}
+    <div class="email-box" aria-label="Correo detectado">
+      <strong>Correo</strong><br>{{ email_hint }}
+    </div>
+    {% endif %}
+    <p class="wait-sub" id="waitSub">Reintentando automáticamente. No cierres esta pestaña.</p>
+    <script>
+      (function () {
+        var sessionId = {{ session_id|tojson }};
+        var pollBase = {{ url_for('api_completar_cuenta_poll')|tojson }};
+        var pollUrl = pollBase + '?session_id=' + encodeURIComponent(sessionId);
+        var indexUrl = {{ url_for('index')|tojson }};
+        var deadline = Date.now() + 6 * 60 * 1000;
+        function poll() {
+          if (Date.now() > deadline) {
+            var el = document.getElementById('waitStatus');
+            var sub = document.getElementById('waitSub');
+            if (el) el.textContent = 'Sigue sin confirmarse.';
+            if (sub) sub.innerHTML = 'Recarga la página o escribe a soporte con tu comprobante. También puedes volver al <a href="' + indexUrl + '">inicio</a>.';
+            return;
+          }
+          fetch(pollUrl, { credentials: 'same-origin' })
+            .then(function (r) {
+              if (r.status === 503) return { status: 'invalid' };
+              return r.json();
+            })
+            .then(function (data) {
+              if (!data) return setTimeout(poll, 3000);
+              if (data.status === 'ready') {
+                window.location.reload();
+                return;
+              }
+              if (data.status === 'invalid') {
+                window.location.href = indexUrl;
+                return;
+              }
+              setTimeout(poll, 2500);
+            })
+            .catch(function () {
+              setTimeout(poll, 3500);
+            });
+        }
+        setTimeout(poll, 600);
+      })();
+    </script>
+    {% else %}
+    <h1>Último paso</h1>
+    <p class="lead">Tu pago está listo. Elige cómo quieres llamarte en el sitio y una contraseña para entrar.</p>
+    <div class="email-box" aria-label="Correo de tu cuenta">
+      <strong>Cuenta (Stripe)</strong><br>{{ email }}
+    </div>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('completar_cuenta') }}">
+      <input type="hidden" name="session_id" value="{{ session_id }}">
+      <div class="input-group">
+        <label for="username">Usuario</label>
+        <input type="text" id="username" name="username" required minlength="2" maxlength="80"
+               pattern="[a-zA-Z0-9_-]+"
+               title="Letras, números, guión y guión bajo"
+               value="{{ username_value }}"
+               autocomplete="username">
+      </div>
+      <div class="input-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="input-group">
+        <label for="password2">Confirmar contraseña</label>
+        <input type="password" id="password2" name="password2" required minlength="8" autocomplete="new-password">
+      </div>
+      <button type="submit">Guardar y continuar</button>
+    </form>
+
+    <p class="hint">
+      Si cierras esta página antes de guardar, usa <a href="{{ url_for('forgot_password') }}">Olvidé mi contraseña</a>
+      con el mismo correo o contacta soporte.
+    </p>
+    {% endif %}
+  </div>
+</body>
+</html>

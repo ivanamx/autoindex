@@ -175,6 +175,40 @@
         .public-banner a:hover {
             color: #7dd3fc;
         }
+
+        .public-banner-counter-row {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: nowrap;
+            font-size: 0.82em;
+            line-height: 1.35;
+        }
+
+        .public-banner-counter-left {
+            color: #fde68a;
+            font-weight: 600;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .public-banner-counter-right {
+            flex-shrink: 0;
+            text-align: right;
+            white-space: nowrap;
+            font-size: 0.78em;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 5px 12px;
+            border-radius: 999px;
+            color: #e0f2fe;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(14, 165, 233, 0.14));
+            border: 1px solid rgba(56, 189, 248, 0.45);
+            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.08), 0 4px 14px rgba(2, 6, 23, 0.35);
+        }
         
         .search-box {
             position: relative;
@@ -458,6 +492,15 @@
                 margin-bottom: 14px;
                 padding: 10px 12px;
                 font-size: 0.82em;
+            }
+
+            .public-banner-counter-row {
+                font-size: 0.78em;
+                gap: 8px;
+            }
+
+            .public-banner-counter-right {
+                font-size: 0.95em;
             }
 
             .example {
@@ -761,9 +804,139 @@
                 min-width: 0;
             }
         }
+
+        /* Modal: límite diario de búsquedas gratis */
+        .limit-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 210;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .limit-modal.is-open {
+            display: flex;
+        }
+
+        .limit-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.82);
+            backdrop-filter: blur(8px);
+        }
+
+        .limit-modal-panel {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 440px;
+            background: rgba(15, 23, 42, 0.97);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 20px;
+            padding: 28px 26px 24px;
+            box-shadow:
+                0 24px 64px rgba(0, 0, 0, 0.55),
+                0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .limit-modal-title {
+            text-align: center;
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: #f8fafc;
+            margin-bottom: 10px;
+            letter-spacing: -0.02em;
+        }
+
+        .limit-modal-sub {
+            text-align: center;
+            font-size: 0.92rem;
+            color: #bae6fd;
+            line-height: 1.5;
+            margin-bottom: 18px;
+        }
+
+        .limit-modal-benefits-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-bottom: 10px;
+        }
+
+        .limit-modal-list {
+            list-style: none;
+            margin: 0 0 22px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .limit-modal-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            line-height: 1.4;
+        }
+
+        .limit-modal-list li::before {
+            content: '';
+            flex-shrink: 0;
+            width: 8px;
+            height: 8px;
+            margin-top: 6px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
+        }
+
+        .limit-modal-cta {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+
+        .limit-modal-cta:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 28px rgba(56, 189, 248, 0.35);
+        }
+
+        .limit-modal-cta:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .limit-modal-trust {
+            text-align: center;
+            font-size: 0.78rem;
+            color: #64748b;
+            margin-top: 14px;
+            line-height: 1.45;
+        }
     </style>
 </head>
-<body class="has-public-topbar" data-open-register="{% if open_register == '1' %}1{% else %}0{% endif %}">
+<body class="has-public-topbar"
+      data-open-register="{% if open_register == '1' %}1{% else %}0{% endif %}"
+      data-user-authenticated="{% if current_user.is_authenticated %}1{% else %}0{% endif %}"
+      data-free-daily-limit="{{ free_daily_limit or '' }}"
+      data-free-remaining-searches="{{ free_remaining_searches if free_remaining_searches is not none else '' }}">
     {% if show_public_banner %}
     <header class="public-topbar" role="banner">
         <span class="public-topbar-brand">AutoIndex</span>
@@ -793,8 +966,20 @@
 
         {% if show_public_banner %}
         <div class="public-banner">
-            Versión Gratis solo permite buscar en catálogo 2025. Para tener acceso a todos los catálogos
+            Versión Gratis permite solo 3 búsquedas diarias en catálogo 2025. Para tener acceso a todos los catálogos
             <a href="#" class="js-open-register">regístrate aquí</a>.
+            <div class="public-banner-counter-row" aria-live="polite">
+                <span class="public-banner-counter-left" id="freeSearchCounterText">
+                    {%- if free_remaining_searches == 1 -%}
+                    Última búsqueda gratuita
+                    {%- elif free_remaining_searches == 0 -%}
+                    Sin búsquedas gratuitas hoy.
+                    {%- else -%}
+                    Te quedan {{ free_remaining_searches }} de {{ free_daily_limit }} búsquedas hoy.
+                    {%- endif -%}
+                </span>
+                <span class="public-banner-counter-right">Resultados en segundos</span>
+            </div>
         </div>
         {% endif %}
         
@@ -885,7 +1070,7 @@
                             <input type="radio" name="plan" value="monthly" checked>
                             <span class="plan-option-body">
                                 <span class="plan-option-name">Mensual</span>
-                                <span class="plan-option-price">200&nbsp;MXN / mes</span>
+                                <span class="plan-option-price">299&nbsp;MXN / mes</span>
                                 <span class="plan-option-perk">Cancela cuando quieras</span>
                             </span>
                         </label>
@@ -896,14 +1081,32 @@
                                     <span class="plan-option-name">Anual</span>
                                     <span class="plan-option-badge">Más vendido</span>
                                 </span>
-                                <span class="plan-option-price">2,000&nbsp;MXN / año</span>
-                                <span class="plan-option-save">Ahorra 17%</span>
+                                <span class="plan-option-price">2,700&nbsp;MXN / año</span>
+                                <span class="plan-option-save">Ahorra 25%</span>
                             </span>
                         </label>
                     </div>
                 </fieldset>
                 <button type="submit" class="register-submit" id="registerSubmit">Continuar al pago</button>
             </form>
+        </div>
+    </div>
+
+    <div id="limitReachedModal" class="limit-modal" aria-hidden="true" role="dialog" aria-labelledby="limitModalTitle">
+        <div class="limit-modal-backdrop" data-close-limit-modal tabindex="-1"></div>
+        <div class="limit-modal-panel">
+            <button type="button" class="register-modal-close" data-close-limit-modal aria-label="Cerrar">&times;</button>
+            <h2 id="limitModalTitle" class="limit-modal-title">Límite alcanzado</h2>
+            <p class="limit-modal-sub">Sigue buscando sin restricciones y encuentra cualquier vidrio en segundos ⚡</p>
+            <p class="limit-modal-benefits-label">Beneficios</p>
+            <ul class="limit-modal-list">
+                <li>Búsquedas ilimitadas</li>
+                <li>Todos los catálogos desde 1949</li>
+                <li>Resultados inmediatos</li>
+            </ul>
+            <div id="limitModalError" class="register-form-error" style="display: none;"></div>
+            <button type="button" class="limit-modal-cta" id="limitModalCta">Desbloquear acceso completo — $299</button>
+            <p class="limit-modal-trust">Acceso inmediato • Sin complicaciones</p>
         </div>
     </div>
 
@@ -925,6 +1128,105 @@
         const voiceBtn = document.getElementById('voiceBtn');
         const loader = document.getElementById('loader');
         const result = document.getElementById('result');
+        const freeSearchCounterTextEl = document.getElementById('freeSearchCounterText');
+        const freeDailyLimit = parseInt(document.body.dataset.freeDailyLimit || '', 10);
+        let freeRemainingSearches = parseInt(document.body.dataset.freeRemainingSearches || '', 10);
+
+        function formatFreeSearchCounterText(remaining, limit) {
+            if (remaining === 1) return 'Última búsqueda gratuita';
+            if (remaining === 0) return 'Sin búsquedas gratuitas hoy.';
+            return `Te quedan ${remaining} de ${limit} búsquedas hoy.`;
+        }
+
+        function updateFreeSearchCounterFromApi(data) {
+            if (!freeSearchCounterTextEl || !data) return;
+            if (typeof data.remaining_free_searches !== 'number' || typeof data.daily_free_limit !== 'number') return;
+            freeRemainingSearches = data.remaining_free_searches;
+            freeSearchCounterTextEl.textContent = formatFreeSearchCounterText(
+                data.remaining_free_searches,
+                data.daily_free_limit
+            );
+        }
+
+        if (freeSearchCounterTextEl && Number.isInteger(freeRemainingSearches) && Number.isInteger(freeDailyLimit)) {
+            freeSearchCounterTextEl.textContent = formatFreeSearchCounterText(freeRemainingSearches, freeDailyLimit);
+        }
+
+        (function () {
+            const limitModal = document.getElementById('limitReachedModal');
+            const limitErr = document.getElementById('limitModalError');
+            const limitCta = document.getElementById('limitModalCta');
+            if (!limitModal || !limitCta) return;
+
+            function openLimitReachedModal() {
+                limitModal.classList.add('is-open');
+                limitModal.setAttribute('aria-hidden', 'false');
+                if (limitErr) {
+                    limitErr.style.display = 'none';
+                    limitErr.textContent = '';
+                }
+            }
+
+            function closeLimitReachedModal() {
+                limitModal.classList.remove('is-open');
+                limitModal.setAttribute('aria-hidden', 'true');
+            }
+
+            window.openLimitReachedModal = openLimitReachedModal;
+
+            limitModal.querySelectorAll('[data-close-limit-modal]').forEach(function (el) {
+                el.addEventListener('click', closeLimitReachedModal);
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && limitModal.classList.contains('is-open')) {
+                    closeLimitReachedModal();
+                }
+            });
+
+            limitCta.addEventListener('click', async function () {
+                if (limitErr) limitErr.style.display = 'none';
+                const authed = document.body.dataset.userAuthenticated === '1';
+                const checkoutUrl = authed ? '/api/checkout-monthly' : '/api/checkout-pay-first-monthly';
+                limitCta.disabled = true;
+                try {
+                    const res = await fetch(checkoutUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: '{}',
+                    });
+                    const data = await res.json().catch(function () { return {}; });
+                    if (!res.ok) {
+                        if (limitErr) {
+                            limitErr.textContent = data.error || 'No se pudo iniciar el pago.';
+                            limitErr.style.display = 'block';
+                        }
+                        return;
+                    }
+                    if (data.checkout_url) {
+                        window.location.href = data.checkout_url;
+                        return;
+                    }
+                    if (limitErr) {
+                        limitErr.textContent = 'Respuesta inesperada del servidor.';
+                        limitErr.style.display = 'block';
+                    }
+                } catch (err) {
+                    if (limitErr) {
+                        limitErr.textContent = 'Error de red. Intenta de nuevo.';
+                        limitErr.style.display = 'block';
+                    }
+                } finally {
+                    limitCta.disabled = false;
+                }
+            });
+
+            const qp = new URLSearchParams(window.location.search);
+            if (qp.get('limit_checkout_canceled') === '1') {
+                openLimitReachedModal();
+            }
+        })();
         
         let recognition;
         
@@ -1011,6 +1313,15 @@ async function performSearch() {
         });
         
         const data = await response.json();
+        updateFreeSearchCounterFromApi(data);
+
+        if (response.status === 429) {
+            result.style.display = 'none';
+            if (typeof window.openLimitReachedModal === 'function') {
+                window.openLimitReachedModal();
+            }
+            return;
+        }
         
         if (data.found) {
             showResult(
@@ -1024,7 +1335,7 @@ async function performSearch() {
                 'success'
             );
         } else {
-            showResult(data.message || 'No se encontraron resultados', 'info');
+            showResult(data.error || data.message || 'No se encontraron resultados', response.ok ? 'info' : 'error');
         }
     } catch (error) {
         showResult('Error al realizar la búsqueda: ' + error.message, 'error');
@@ -1079,9 +1390,10 @@ async function performSearch() {
             });
 
             document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape' && modal.classList.contains('is-open')) {
-                    closeRegisterModal();
-                }
+                if (e.key !== 'Escape' || !modal.classList.contains('is-open')) return;
+                var lim = document.getElementById('limitReachedModal');
+                if (lim && lim.classList.contains('is-open')) return;
+                closeRegisterModal();
             });
 
             const params = new URLSearchParams(window.location.search);
@@ -1130,6 +1442,7 @@ async function performSearch() {
                     submitBtn.disabled = false;
                 }
             });
+
         })();
     </script>
 </body>
