@@ -125,19 +125,41 @@ def _consume_public_daily_search() -> tuple[int, int]:
     return count, max(0, FREE_DAILY_SEARCH_LIMIT - count)
 
 
+def _stored_pdf_basename(stored_path: Optional[str]) -> str:
+    """Nombre del .pdf aunque en BD venga una ruta Windows con backslashes."""
+    if not stored_path:
+        return ""
+    norm = stored_path.replace("\\", "/").strip()
+    base = os.path.basename(norm)
+    return base or norm
+
+
 def _resolve_pdf_path(filename: str):
     if not filename:
         return None
-    base = os.path.basename(filename.replace("\\", "/").strip())
-    if not base or base in (".", ".."):
-        return None
+    norm = filename.replace("\\", "/").strip()
+    candidates = []
+    base = os.path.basename(norm)
+    if base and base not in (".", ".."):
+        candidates.append(base)
+    # Rutas corruptas en la URL (p. ej. mezcla de caracteres sin separadores)
+    for m in re.finditer(r"[^/\s]+\.pdf\b", norm, flags=re.IGNORECASE):
+        candidates.append(m.group(0))
     pdf_dir_real = os.path.realpath(PDF_DIR)
-    full = os.path.realpath(os.path.join(PDF_DIR, base))
-    if not full.startswith(pdf_dir_real + os.sep):
-        return None
-    if not os.path.isfile(full):
-        return None
-    return base, full
+    seen = set()
+    for cand in candidates:
+        if not cand or cand in seen:
+            continue
+        seen.add(cand)
+        if cand in (".", ".."):
+            continue
+        full = os.path.realpath(os.path.join(PDF_DIR, cand))
+        if not full.startswith(pdf_dir_real + os.sep):
+            continue
+        if not os.path.isfile(full):
+            continue
+        return cand, full
+    return None
 
 
 def _user_may_read_pdf(basename: str) -> bool:
@@ -295,50 +317,113 @@ def _unique_username_from_email(cur, email: str) -> str:
         candidate = (base[:max_base] if max_base > 0 else 'u') + suffix
 
 
-def _checkout_email_from_session(sess: dict) -> str:
-    details = sess.get('customer_details') or {}
-    raw = details.get('email') or sess.get('customer_email') or ''
+def _stripe_get(obj: object, key: str, default=None):
+    """Lee clave en dict o StripeObject (Stripe Python v11+ no tiene .get())."""
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        v = obj.get(key, default)
+        return default if v is None else v
+    try:
+        v = obj[key]
+    except (KeyError, TypeError, AttributeError):
+        return default
+    return default if v is None else v
+
+
+def _stripe_resource_id(value: object) -> Optional[str]:
+    """Convierte cus_/sub_ a string; si expand devolvió un objeto Stripe, usa su .id."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        s = value.strip()
+        return s if s else None
+    if isinstance(value, dict):
+        return _stripe_resource_id(value.get('id'))
+    rid = getattr(value, 'id', None)
+    if isinstance(rid, str) and rid.strip():
+        return rid.strip()
+    return None
+
+
+def _stripe_meta_dict(obj: object) -> dict:
+    raw = _stripe_get(obj, 'metadata')
+    if not raw:
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    to_dict = getattr(raw, 'to_dict', None)
+    if callable(to_dict):
+        try:
+            d = to_dict()
+            if isinstance(d, dict):
+                return d
+        except Exception:
+            pass
+    out = {}
+    try:
+        keys = getattr(raw, 'keys', None)
+        if callable(keys):
+            for k in keys():
+                if not isinstance(k, str):
+                    continue
+                try:
+                    out[k] = raw[k]
+                except (KeyError, TypeError):
+                    pass
+    except Exception:
+        pass
+    return out
+
+
+def _checkout_email_from_session(sess: object) -> str:
+    details = _stripe_get(sess, 'customer_details') or {}
+    if isinstance(details, dict):
+        raw_email = details.get('email')
+    else:
+        raw_email = _stripe_get(details, 'email')
+    raw = raw_email or _stripe_get(sess, 'customer_email') or ''
     email = (raw or '').strip().lower()
     if email:
         return email
-    cust_id = sess.get('customer')
+    cust_id = _stripe_resource_id(_stripe_get(sess, 'customer'))
     if not cust_id:
         return ''
     try:
         cust = stripe.Customer.retrieve(cust_id)
-        return (cust.get('email') or '').strip().lower()
+        return (_stripe_get(cust, 'email') or '').strip().lower()
     except stripe.StripeError as e:
         print('pay_first: Stripe customer retrieve:', e)
         return ''
 
 
-def _pay_first_sync_user_from_session(session_obj: dict) -> Optional[int]:
+def _pay_first_sync_user_from_session(session_obj: object) -> Optional[int]:
     """
     Crea o actualiza el usuario tras checkout pay_first (idempotente).
     Usuario y contraseña definitivos se definen en /completar-cuenta.
     """
-    meta = session_obj.get('metadata') or {}
+    meta = _stripe_meta_dict(session_obj)
     if (meta.get('flow') or '').strip().lower() != 'pay_first':
         return None
     plan_raw = (meta.get('plan') or '').strip().lower()
     plan = plan_raw if plan_raw in ('monthly', 'annual') else 'monthly'
-    customer_id = session_obj.get('customer')
-    subscription_id = session_obj.get('subscription')
+    customer_id = _stripe_resource_id(_stripe_get(session_obj, 'customer'))
+    subscription_id = _stripe_resource_id(_stripe_get(session_obj, 'subscription'))
     email = _checkout_email_from_session(session_obj)
-    if not email and session_obj.get('id'):
+    if not email and _stripe_get(session_obj, 'id'):
         try:
             expanded = stripe.checkout.Session.retrieve(
-                session_obj['id'],
+                _stripe_get(session_obj, 'id'),
                 expand=['customer'],
             )
             email = _checkout_email_from_session(expanded)
         except stripe.StripeError as e:
             print('pay_first: no se pudo recuperar la sesión', e)
     if not email:
-        print('pay_first: sin email en sesión de checkout', session_obj.get('id'))
+        print('pay_first: sin email en sesión de checkout', _stripe_get(session_obj, 'id'))
         return None
     if not subscription_id:
-        print('pay_first: sin subscription id', session_obj.get('id'))
+        print('pay_first: sin subscription id', _stripe_get(session_obj, 'id'))
         return None
 
     conn = get_db_connection()
@@ -450,7 +535,7 @@ def _pay_first_sync_user_from_session(session_obj: dict) -> Optional[int]:
     return uid
 
 
-def _stripe_pay_first_checkout_completed(session_obj: dict):
+def _stripe_pay_first_checkout_completed(session_obj: object):
     """Webhook: sincroniza usuario pay_first (sin correo; completar datos en el sitio)."""
     _pay_first_sync_user_from_session(session_obj)
 
@@ -463,16 +548,16 @@ def _retrieve_pay_first_checkout_session(session_id: str):
         sess = stripe.checkout.Session.retrieve(session_id.strip(), expand=['customer'])
     except stripe.StripeError:
         return None
-    meta = sess.get('metadata') or {}
+    meta = _stripe_meta_dict(sess)
     if (meta.get('flow') or '').strip().lower() != 'pay_first':
         return None
-    if sess.get('mode') != 'subscription':
+    if _stripe_get(sess, 'mode') != 'subscription':
         return None
     return sess
 
 
-def _checkout_session_payment_ready(sess: dict) -> bool:
-    ps = sess.get('payment_status')
+def _checkout_session_payment_ready(sess: object) -> bool:
+    ps = _stripe_get(sess, 'payment_status')
     return ps in ('paid', 'no_payment_required')
 
 
@@ -739,8 +824,8 @@ def _require_registered_device_session():
         return redirect(url_for('login'))
 
 
-def _stripe_handle_checkout_completed(session: dict):
-    meta = session.get('metadata') or {}
+def _stripe_handle_checkout_completed(session: object):
+    meta = _stripe_meta_dict(session)
     if (meta.get('flow') or '').strip().lower() == 'pay_first':
         _stripe_pay_first_checkout_completed(session)
         return
@@ -753,8 +838,8 @@ def _stripe_handle_checkout_completed(session: dict):
         return
     plan_raw = (meta.get('plan') or '').strip().lower()
     plan = plan_raw if plan_raw in ('monthly', 'annual') else None
-    customer_id = session.get('customer')
-    subscription_id = session.get('subscription')
+    customer_id = _stripe_resource_id(_stripe_get(session, 'customer'))
+    subscription_id = _stripe_resource_id(_stripe_get(session, 'subscription'))
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
@@ -824,7 +909,7 @@ def _try_autologin_from_checkout_session_id(session_id: str):
     except stripe.StripeError:
         return None
 
-    meta = sess.get('metadata') or {}
+    meta = _stripe_meta_dict(sess)
     if (meta.get('flow') or '').strip().lower() == 'pay_first':
         return redirect(url_for('completar_cuenta', session_id=sid))
 
@@ -843,17 +928,26 @@ def _try_autologin_from_checkout_session_id(session_id: str):
     return _login_user_from_db_row_after_payment(uid)
 
 
-def _stripe_handle_subscription_updated(sub: dict):
-    sub_id = sub.get('id')
+def _stripe_handle_subscription_updated(sub: object):
+    sub_id = _stripe_resource_id(_stripe_get(sub, 'id'))
     if not sub_id:
         return
-    status = _map_stripe_subscription_status(sub.get('status') or '')
+    status = _map_stripe_subscription_status(_stripe_get(sub, 'status') or '')
     price_id = None
-    items = sub.get('items', {}).get('data', [])
-    if items and isinstance(items, list):
-        price_id = (items[0].get('price') or {}).get('id')
+    items = _stripe_get(sub, 'items')
+    data = _stripe_get(items, 'data') if items is not None else None
+    if data is None:
+        data = []
+    if not isinstance(data, (list, tuple)):
+        try:
+            data = list(data)
+        except TypeError:
+            data = []
+    if data:
+        price_obj = _stripe_get(data[0], 'price')
+        price_id = _stripe_get(price_obj, 'id')
     plan = _stripe_price_to_plan(price_id)
-    cpe = sub.get('current_period_end')
+    cpe = _stripe_get(sub, 'current_period_end')
     period_end = None
     if cpe is not None:
         try:
@@ -881,8 +975,8 @@ def _stripe_handle_subscription_updated(sub: dict):
         _enforce_device_session_cap(row[0])
 
 
-def _stripe_handle_subscription_deleted(sub: dict):
-    sub_id = sub.get('id')
+def _stripe_handle_subscription_deleted(sub: object):
+    sub_id = _stripe_resource_id(_stripe_get(sub, 'id'))
     if not sub_id:
         return
     conn = get_db_connection()
@@ -1242,7 +1336,7 @@ def search():
             r_page, r_pdf_path, r_text, r_score_all, r_score_primary, r_score_trgm, r_score_compact, r_final_score = row
             candidates.append({
                 'page': r_page,
-                'pdf_name': Path(r_pdf_path).name,
+                'pdf_name': _stored_pdf_basename(r_pdf_path),
                 'score': round(float(r_final_score), 6),
                 'score_all': round(float(r_score_all), 6),
                 'score_primary': round(float(r_score_primary), 6),
@@ -1255,7 +1349,7 @@ def search():
             'found': True,
             'year': year,
             'page': page,
-            'pdf_name': Path(pdf_path).name,
+            'pdf_name': _stored_pdf_basename(pdf_path),
             'marca': marca or '',
             'modelo': modelo or '',
             'search_strategy': search_strategy,
@@ -1287,11 +1381,11 @@ def serve_pdf_file(pdf_name, page):
         return "No autorizado para ver este catálogo", 403
 
     print(f"✅ Abriendo PDF: {pdf_path} en página {page}")
-    match_year = re.search(r"(19\d{2}|20\d{2})", pdf_name)
+    match_year = re.search(r"(19\d{2}|20\d{2})", basename)
     year = int(match_year.group(1)) if match_year else 0
     return render_template(
         "viewer.html",
-        pdf_name=pdf_name,
+        pdf_name=basename,
         page=page,
         year=year,
         can_navigate_catalog=has_full_catalog_access(),
@@ -1720,10 +1814,10 @@ def api_subscription_success_poll():
     except stripe.StripeError:
         return jsonify({'status': 'invalid'})
 
-    if sess.get('mode') != 'subscription':
+    if _stripe_get(sess, 'mode') != 'subscription':
         return jsonify({'status': 'invalid'})
 
-    meta = sess.get('metadata') or {}
+    meta = _stripe_meta_dict(sess)
     if (meta.get('flow') or '').strip().lower() == 'pay_first':
         return jsonify({'status': 'pay_first'})
 
@@ -1894,13 +1988,18 @@ def api_register_checkout():
     user_id = None
 
     try:
+        # Plan elegido en checkout; el estado pending_payment requiere migración 007 en la BD
+        # si el CHECK valid_subscription solo permitía active/inactive/expired.
         cur.execute(
             """
-            INSERT INTO users (username, email, password_hash, subscription_status)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO users (
+                username, email, password_hash, subscription_status,
+                subscription_plan, subscription_current_period_end
+            )
+            VALUES (%s, %s, %s, %s, %s, NULL)
             RETURNING id
             """,
-            (username, email, hashed, 'pending_payment'),
+            (username, email, hashed, 'pending_payment', plan),
         )
         user_id = cur.fetchone()[0]
         conn.commit()
@@ -1909,6 +2008,16 @@ def api_register_checkout():
         cur.close()
         conn.close()
         return jsonify({'error': 'Ese usuario o email ya está registrado.'}), 409
+    except pg_errors.CheckViolation:
+        conn.rollback()
+        cur.close()
+        conn.close()
+        return jsonify({
+            'error': (
+                'La base de datos rechazó el registro (CHECK valid_subscription). '
+                'Ejecuta migrations/007_valid_subscription_status.sql en PostgreSQL.'
+            ),
+        }), 500
     except Exception as e:
         conn.rollback()
         cur.close()

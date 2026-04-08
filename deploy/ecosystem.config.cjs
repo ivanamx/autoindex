@@ -1,5 +1,6 @@
 /**
- * PM2: Gunicorn sirve la app Flask en 127.0.0.1:8000 (nginx hace proxy).
+ * PM2: Gunicorn sirve la app Flask en 127.0.0.1:8001 (nginx hace proxy).
+ * Si 8001 también está ocupado, cambia aquí y en deploy/nginx-autoindex.lat.conf.
  *
  * Cambia `root` si el código no está en esta ruta en el servidor.
  *
@@ -18,7 +19,7 @@ module.exports = {
       cwd: root,
       script: `${root}/venv/bin/gunicorn`,
       args:
-        '-w 3 -b 127.0.0.1:8000 --timeout 120 --access-logfile - --error-logfile - app:app',
+        '-w 3 -b 127.0.0.1:8001 --timeout 120 --access-logfile - --error-logfile - app:app',
       interpreter: 'none',
       autorestart: true,
       max_restarts: 15,
