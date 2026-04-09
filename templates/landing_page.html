@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AutoIndex | Encuentra clave NAGS en segundos</title>
     <meta name="description" content="Encuentra el numero de parte NAGS correcto en 5 segundos. Busca cualquier vidrio al instante, sin catalogos pesados ni demoras.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #020617;
@@ -65,6 +66,7 @@
         }
 
         .hero h1 {
+            font-family: "Montserrat", "Inter", "Segoe UI", Tahoma, sans-serif;
             font-size: clamp(1.6rem, 2.5vw, 2.45rem);
             line-height: 1.15;
             font-weight: 700;
@@ -72,7 +74,9 @@
             text-wrap: balance;
         }
 
-        .hero p {
+        /* Solo el subtítulo del hero; no afecta .hero-note (evita text-wrap: pretty en una línea) */
+        .hero-copy p {
+            font-family: "Montserrat", "Inter", "Segoe UI", Tahoma, sans-serif;
             color: var(--muted);
             font-size: clamp(0.95rem, 1.25vw, 1.1rem);
             margin: 0;
@@ -119,6 +123,17 @@
             min-height: 100%;
         }
 
+        /* Desktop: CTA y microcopy centrados; bullets siguen a la izquierda */
+        .hero-cta-box > .btn-primary {
+            align-self: center;
+        }
+
+        .hero-cta-box > .hero-note {
+            width: 100%;
+            text-align: center;
+            align-self: stretch;
+        }
+
         .hero-cta-benefits {
             width: 100%;
             margin-bottom: 40px;
@@ -145,6 +160,10 @@
             content: "•";
             color: var(--brand);
             font-weight: 700;
+        }
+
+        .hero-bullet-mobile-only {
+            display: none;
         }
 
         .btn {
@@ -174,6 +193,7 @@
             white-space: normal;
             letter-spacing: 0.01em;
             margin-top: 2px;
+            text-wrap: wrap;
         }
 
         section {
@@ -188,6 +208,7 @@
         }
 
         h2 {
+            font-family: "Montserrat", "Inter", "Segoe UI", Tahoma, sans-serif;
             font-size: clamp(1.05rem, 1.6vw, 1.3rem);
             margin-bottom: 8px;
         }
@@ -286,8 +307,31 @@
                 text-align: left;
             }
 
+            .hero-bullet-desktop-only {
+                display: none;
+            }
+
+            .hero-bullet-mobile-only {
+                display: inline;
+            }
+
             .hero-note {
-                white-space: normal;
+                white-space: nowrap;
+                text-wrap: nowrap;
+                word-break: keep-all;
+                overflow-wrap: normal;
+                font-size: clamp(0.52rem, 2.35vw, 0.7rem);
+                width: 100%;
+                max-width: 100%;
+                text-align: center;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                line-height: 1.2;
+            }
+
+            .hero-note::-webkit-scrollbar {
+                display: none;
             }
 
             .final-cta {
@@ -308,7 +352,7 @@
             <div class="wrap">
                 <div class="hero-copy">
                     <h1>Encuentra la clave NAGS en segundos</h1>
-                    <p>Olvidate de catalogos viejos y archivos pesados. Busca cualquier vidrio al instante.</p>
+                    <p>Olvídate de catálogos viejos y archivos pesados. Busca cualquier vidrio al instante.</p>
                 </div>
                 <div class="hero-main">
                     <div class="hero-video">
@@ -320,10 +364,12 @@
                     <div class="hero-cta-box">
                         <div class="hero-cta-benefits">
                             <ul>
-                                <li>Ahorra 10-15 minutos en buscar una pieza.</li>
-                                <li>Todos los catálogos (1949-2025) en un solo lugar.</li>
+                                <li>
+                                    <span class="hero-bullet-desktop-only">Catálogos (1949-2025), en un solo lugar.</span><span class="hero-bullet-mobile-only">Catálogos 1949-2025 en un solo lugar.</span>
+                                </li>
+                                <li>Ahorra 10-15 minutos en buscar piezas.</li>
                                 <li>Menos errores, menos clientes molestos.</li>
-                                <li>Funciona desde el celular y cualquier dispositivo.</li>
+                                <li>Funciona en celular y cualquier dispositivo.</li>
                             </ul>
                         </div>
                         <a class="btn btn-primary" href="{{ url_for('index') }}">Probar ahora gratis</a>
@@ -338,7 +384,7 @@
                 <div class="panel final-cta">
                     <div class="final-cta-copy">
                         <h2>¿Ya probaste las 3 búsquedas gratis?</h2>
-                        <p>Si te funciona, regístrate y obtén acceso ilimitado.</p>
+                        <p>Regístrate en 2 minutos y obtén acceso ilimitado.</p>
                         <div id="landingCheckoutError" class="final-cta-error"></div>
                     </div>
                     <a class="btn btn-primary" id="landingCheckoutCta" href="#">Quiero acceso ilimitado</a>
