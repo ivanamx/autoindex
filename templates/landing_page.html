@@ -100,14 +100,109 @@
             overflow: hidden;
         }
 
-        .hero-video video {
+        .hero-video-inner {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            line-height: 0;
+            isolation: isolate;
+        }
+
+        .hero-video-inner video {
             display: block;
+            position: relative;
+            z-index: 1;
             width: 100%;
             height: clamp(240px, 31vw, 340px);
             object-fit: cover;
             object-position: center;
+            background: #000;
+        }
+
+        /* Sin controles nativos hasta dar play: el JS pone video.controls = true al iniciar */
+        .hero-video-inner video:not([controls]) {
+            pointer-events: none;
+        }
+
+        .hero-video-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 18px;
+            background: rgba(51, 65, 85, 0.55);
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+            pointer-events: none;
             border-radius: 10px;
-            background: transparent;
+        }
+
+        .hero-video-overlay-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            pointer-events: auto;
+            max-width: 100%;
+        }
+
+        .hero-video-play-btn {
+            flex-shrink: 0;
+            width: 72px;
+            height: 72px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            background: linear-gradient(145deg, var(--brand), var(--brand-2));
+            box-shadow:
+                0 12px 32px rgba(56, 189, 248, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.22);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .hero-video-play-btn:hover {
+            transform: scale(1.06);
+            box-shadow:
+                0 14px 36px rgba(56, 189, 248, 0.55),
+                inset 0 1px 0 rgba(255, 255, 255, 0.28);
+        }
+
+        .hero-video-play-btn:focus-visible {
+            outline: 2px solid #7dd3fc;
+            outline-offset: 3px;
+        }
+
+        .hero-video-play-btn svg {
+            margin-left: 4px;
+        }
+
+        .hero-video-inner.is-playing .hero-video-overlay {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .hero-video-inner.is-playing video {
+            pointer-events: auto;
+        }
+
+        .hero-video-overlay-text {
+            margin: 0;
+            max-width: 28ch;
+            font-family: "Montserrat", "Inter", "Segoe UI", Tahoma, sans-serif;
+            font-size: clamp(0.95rem, 2vw, 1.2rem);
+            font-weight: 600;
+            line-height: 1.35;
+            color: #f8fafc;
+            text-align: center;
+            text-wrap: balance;
+            text-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
         }
 
         .hero-cta-box {
@@ -293,9 +388,19 @@
                 text-align: center;
             }
 
-            .hero-video video {
+            .hero-video-inner video {
                 height: auto;
                 aspect-ratio: 16 / 9;
+            }
+
+            .hero-video-play-btn {
+                width: 64px;
+                height: 64px;
+            }
+
+            .hero-video-overlay-text {
+                font-size: clamp(0.88rem, 3.6vw, 1.05rem);
+                max-width: 32ch;
             }
 
             .hero-cta-box {
@@ -356,10 +461,33 @@
                 </div>
                 <div class="hero-main">
                     <div class="hero-video">
-                        <video controls preload="metadata" playsinline>
-                            <source src="{{ url_for('static', filename='videos/demo.mp4') }}" type="video/mp4">
-                            Tu navegador no soporta video HTML5.
-                        </video>
+                        <div class="hero-video-inner" id="heroVideoInner">
+                            <video
+                                id="heroDemoVideo"
+                                preload="none"
+                                playsinline
+                                poster="{{ url_for('static', filename='images/landing-video-poster.jpg') }}"
+                            >
+                                <source src="{{ url_for('static', filename='videos/demo.mp4') }}" type="video/mp4">
+                                Tu navegador no soporta video HTML5.
+                            </video>
+                            <div class="hero-video-overlay" id="heroVideoOverlay">
+                                <div class="hero-video-overlay-inner">
+                                    <button
+                                        type="button"
+                                        class="hero-video-play-btn"
+                                        id="heroVideoPlayBtn"
+                                        aria-label="Reproducir video: cómo funciona AutoIndex"
+                                        aria-controls="heroDemoVideo"
+                                    >
+                                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M8 5v14l11-7L8 5z" fill="currentColor"/>
+                                        </svg>
+                                    </button>
+                                    <p class="hero-video-overlay-text">Mira aquí como funciona, en menos de un minuto</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="hero-cta-box">
                         <div class="hero-cta-benefits">
@@ -399,6 +527,38 @@
         <a href="{{ url_for('privacidad') }}">Politica de privacidad</a>
     </footer>
     <script>
+        (function () {
+            const inner = document.getElementById('heroVideoInner');
+            const vid = document.getElementById('heroDemoVideo');
+            const btn = document.getElementById('heroVideoPlayBtn');
+            if (!inner || !vid || !btn) return;
+
+            function showChrome() {
+                vid.controls = true;
+                inner.classList.add('is-playing');
+            }
+
+            function resetToPoster() {
+                vid.pause();
+                vid.currentTime = 0;
+                vid.controls = false;
+                inner.classList.remove('is-playing');
+            }
+
+            btn.addEventListener('click', function () {
+                showChrome();
+                var p = vid.play();
+                if (p && typeof p.catch === 'function') {
+                    p.catch(function () {
+                        inner.classList.remove('is-playing');
+                        vid.controls = false;
+                    });
+                }
+            });
+
+            vid.addEventListener('ended', resetToPoster);
+        })();
+
         (function () {
             const cta = document.getElementById('landingCheckoutCta');
             const errEl = document.getElementById('landingCheckoutError');
