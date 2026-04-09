@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel · {{ site_name }}</title>
+  <meta name="theme-color" content="#020617">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/icon-180.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
@@ -468,6 +471,45 @@
       margin: 0 6px;
     }
     .footer-links a:hover { color: #38bdf8; }
+
+    .install-box {
+      margin-top: 0;
+      margin-bottom: 20px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .install-box.show { display: block; }
+    }
+    @media (min-width: 769px) {
+      .install-box { display: none !important; }
+    }
+    .install-box-text {
+      font-size: 0.86rem;
+      color: #bae6fd;
+      line-height: 1.45;
+      margin-bottom: 10px;
+    }
+    .install-box-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .install-btn {
+      padding: 9px 12px;
+      border-radius: 9px;
+      border: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: #fff;
+      font-family: inherit;
+    }
+    .install-btn-secondary {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #cbd5e1;
+    }
   </style>
 </head>
 <body>
@@ -494,6 +536,14 @@
         </div>
         <div class="panel-page-header-actions">
           <a class="btn-primary" href="{{ url_for('index') }}">Ir a búsqueda</a>
+        </div>
+      </div>
+
+      <div id="installBox" class="install-box" aria-live="polite">
+        <div id="installBoxText" class="install-box-text"></div>
+        <div class="install-box-actions">
+          <button type="button" id="installAppBtn" class="install-btn" style="display:none;">Agregar acceso directo</button>
+          <button type="button" id="dismissInstallBtn" class="install-btn install-btn-secondary">Ocultar</button>
         </div>
       </div>
 
@@ -588,5 +638,85 @@
       <a href="{{ url_for('preguntas_frecuentes') }}">FAQ</a>
     </p>
   </div>
+  <script>
+    (function () {
+      var installBox = document.getElementById('installBox');
+      var installBoxText = document.getElementById('installBoxText');
+      var installAppBtn = document.getElementById('installAppBtn');
+      var dismissInstallBtn = document.getElementById('dismissInstallBtn');
+      var INSTALL_DISMISSED_KEY = 'autoindex_install_dismissed';
+      var deferredInstallPrompt = null;
+      var mqMobile = window.matchMedia('(max-width: 768px)');
+
+      function isMobileViewport() {
+        return mqMobile.matches;
+      }
+
+      function showInstallBox(message, showInstallButton) {
+        if (!isMobileViewport()) return;
+        if (!installBox || localStorage.getItem(INSTALL_DISMISSED_KEY) === '1') return;
+        if (installBoxText) installBoxText.textContent = message;
+        if (installAppBtn) installAppBtn.style.display = showInstallButton ? 'inline-block' : 'none';
+        installBox.classList.add('show');
+      }
+
+      function isIos() {
+        return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+      }
+
+      function isInStandaloneMode() {
+        return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      }
+
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/service-worker.js').catch(function () {});
+        });
+      }
+
+      window.addEventListener('beforeinstallprompt', function (e) {
+        if (!isMobileViewport()) {
+          return;
+        }
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        showInstallBox('Instala AutoIndex para abrirlo como app desde tu pantalla de inicio.', true);
+      });
+
+      mqMobile.addEventListener('change', function () {
+        if (!installBox) return;
+        if (!isMobileViewport()) {
+          installBox.classList.remove('show');
+        }
+      });
+
+      window.addEventListener('appinstalled', function () {
+        if (!installBox) return;
+        installBox.classList.remove('show');
+        deferredInstallPrompt = null;
+      });
+
+      if (dismissInstallBtn) {
+        dismissInstallBtn.addEventListener('click', function () {
+          localStorage.setItem(INSTALL_DISMISSED_KEY, '1');
+          if (installBox) installBox.classList.remove('show');
+        });
+      }
+
+      if (installAppBtn) {
+        installAppBtn.addEventListener('click', function () {
+          if (!deferredInstallPrompt) return;
+          deferredInstallPrompt.prompt();
+          deferredInstallPrompt.userChoice.then(function () {
+            deferredInstallPrompt = null;
+          });
+        });
+      }
+
+      if (!isInStandaloneMode() && isIos() && isMobileViewport()) {
+        showInstallBox('En iPhone: abre Compartir y elige "Agregar a pantalla de inicio".', false);
+      }
+    })();
+  </script>
 </body>
 </html>

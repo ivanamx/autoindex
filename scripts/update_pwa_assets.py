@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT / "scripts" / "pwa_assets.json"
 MANIFEST_PATH = ROOT / "static" / "manifest.webmanifest"
 INDEX_PATH = ROOT / "templates" / "index.html"
+DASHBOARD_PATH = ROOT / "templates" / "dashboard.html"
 SW_PATH = ROOT / "static" / "service-worker.js"
 ICONS_DIR = ROOT / "static" / "icons"
 
@@ -83,8 +84,8 @@ def update_manifest(cfg: dict) -> None:
         f.write("\n")
 
 
-def update_index_html(cfg: dict) -> None:
-    html = INDEX_PATH.read_text(encoding="utf-8")
+def update_apple_touch_icon(path: Path, cfg: dict) -> None:
+    html = path.read_text(encoding="utf-8")
     new_tag = (
         f'<link rel="apple-touch-icon" sizes="180x180" '
         f'href="/static/icons/{cfg["icons"]["apple_touch"]}">'
@@ -97,9 +98,9 @@ def update_index_html(cfg: dict) -> None:
         insert = f"    {new_tag}\n"
         idx = html.find(head_close)
         if idx == -1:
-            raise ValueError("No se encontro </head> en index.html")
+            raise ValueError(f"No se encontro </head> en {path.name}")
         html = html[:idx] + insert + html[idx:]
-    INDEX_PATH.write_text(html, encoding="utf-8", newline="\n")
+    path.write_text(html, encoding="utf-8", newline="\n")
 
 
 def update_service_worker(cfg: dict) -> None:
@@ -116,9 +117,10 @@ def main() -> None:
     cfg = load_config()
     validate_icon_files(cfg)
     update_manifest(cfg)
-    update_index_html(cfg)
+    update_apple_touch_icon(INDEX_PATH, cfg)
+    update_apple_touch_icon(DASHBOARD_PATH, cfg)
     update_service_worker(cfg)
-    print("Listo: manifest, index.html y service-worker actualizados.")
+    print("Listo: manifest, index.html, dashboard.html y service-worker actualizados.")
 
 
 if __name__ == "__main__":
