@@ -1123,7 +1123,7 @@ def _stripe_handle_subscription_deleted(sub: object):
     conn.close()
 
 
-@app.route('/')
+@app.route('/buscar')
 def index():
     show_public_banner = not has_full_catalog_access()
     open_register = request.args.get('open_register')
@@ -1135,6 +1135,11 @@ def index():
         free_daily_limit=FREE_DAILY_SEARCH_LIMIT,
         free_remaining_searches=free_remaining,
     )
+
+
+@app.route('/')
+def landing():
+    return render_template('landing_page.html')
 
 
 @app.route('/terminos')
