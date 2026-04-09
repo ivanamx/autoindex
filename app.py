@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_file, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_file, send_from_directory, session
 import os
 import re
 import hashlib
@@ -1007,6 +1007,16 @@ def index():
 @app.route('/terminos')
 def terminos():
     return render_template('terminos.html')
+
+
+@app.route('/manifest.webmanifest')
+def manifest():
+    return send_from_directory('static', 'manifest.webmanifest', mimetype='application/manifest+json')
+
+
+@app.route('/service-worker.js')
+def service_worker():
+    return send_from_directory('static', 'service-worker.js', mimetype='application/javascript')
 
 
 @app.route('/privacidad')

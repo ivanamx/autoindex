@@ -1,0 +1,9 @@
+{
+  "cache_version": "v1",
+  "icons": {
+    "apple_touch": "icon-180.png",
+    "icon_192": "icon-192.png",
+    "icon_512": "icon-512.png",
+    "icon_512_maskable": "icon-512-maskable.png"
+  }
+}
