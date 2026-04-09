@@ -62,7 +62,10 @@ class User(UserMixin):
         self.password_hash = password_hash
         self.subscription_status = subscription_status
         self.subscription_plan = subscription_plan
-        self.role = role or 'user'
+        r = role or "user"
+        if isinstance(r, str):
+            r = r.strip().lower()
+        self.role = r if r in ("user", "admin") else "user"
 
     @property
     def is_admin(self) -> bool:
@@ -114,10 +117,11 @@ PUBLIC_CATALOGO_NOMBRE = "NAGS 2025.pdf"
 
 
 def has_full_catalog_access():
-    return (
-        current_user.is_authenticated
-        and getattr(current_user, "subscription_status", None) == "active"
-    )
+    if not current_user.is_authenticated:
+        return False
+    if getattr(current_user, "is_admin", False):
+        return True
+    return getattr(current_user, "subscription_status", None) == "active"
 
 
 def _public_daily_search_stats() -> tuple[int, int]:
@@ -1435,6 +1439,8 @@ def serve_pdf_file(pdf_name, page):
     )
 
 def _dashboard_require_active():
+    if getattr(current_user, "is_admin", False):
+        return None
     if current_user.subscription_status != 'active':
         flash('Tu suscripción no está activa. No puedes acceder al panel.')
         return redirect(url_for('index'))
@@ -1674,6 +1680,8 @@ def login():
                 logout_user()
                 flash('No se pudo iniciar sesión. Intenta de nuevo o ejecuta la migración 004 en PostgreSQL.')
                 return redirect(url_for('login'))
+            if user_obj.is_admin:
+                return redirect(url_for('admin_dashboard'))
             return redirect(url_for('index'))
 
         flash('Credenciales incorrectas')
