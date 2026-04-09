@@ -1,5 +1,7 @@
-const CACHE_NAME = "autoindex-v1";
-const CORE_ASSETS = ["/", "/manifest.webmanifest"];
+const CACHE_NAME = "autoindex-v2";
+// No incluir "/" aquí: la home es HTML dinámico (sesión / suscripción). Precachearla
+// hace que tras el login sigas viendo la copia en caché de la visita anónima.
+const CORE_ASSETS = ["/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -23,6 +25,14 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  // Navegaciones HTML: siempre red primero para respetar cookies de sesión.
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cached) => cached || fetch(event.request))
