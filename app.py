@@ -1019,6 +1019,16 @@ def service_worker():
     return send_from_directory('static', 'service-worker.js', mimetype='application/javascript')
 
 
+@app.route('/favicon.ico')
+def favicon():
+    """Muchos navegadores piden /favicon.ico en la raíz aunque el HTML enlace otro path."""
+    return send_from_directory(
+        os.path.join(app.root_path, 'static', 'icons'),
+        'favicon.ico',
+        mimetype='image/x-icon',
+    )
+
+
 @app.route('/privacidad')
 def privacidad():
     return render_template('privacidad.html')
