@@ -134,6 +134,10 @@
             width: 100%;
         }
 
+        .container.container--tight-top {
+            padding-top: 20px;
+        }
+
         .logo {
             text-align: center;
             margin-bottom: 12px;
@@ -158,6 +162,16 @@
             font-size: 0.9em;
         }
 
+        .public-banner-outer {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 16px;
+        }
+
+        .public-banner-outer .public-banner {
+            margin-bottom: 0;
+        }
+
         .public-banner {
             background: rgba(250, 204, 21, 0.08);
             border: 1px solid rgba(250, 204, 21, 0.22);
@@ -179,38 +193,44 @@
             color: #7dd3fc;
         }
 
-        .public-banner-counter-row {
-            margin-top: 8px;
+        .search-card-top-row {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
             gap: 10px;
-            flex-wrap: nowrap;
-            font-size: 0.82em;
-            line-height: 1.35;
+            margin: 0 0 12px 0;
+            width: 100%;
         }
 
-        .public-banner-counter-left {
+        .search-card-counter {
             color: #fde68a;
             font-weight: 600;
+            font-size: 0.82rem;
+            line-height: 1.35;
             min-width: 0;
             flex: 1;
+            text-align: left;
         }
 
-        .public-banner-counter-right {
+        .search-card-speed {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             flex-shrink: 0;
-            text-align: right;
+            align-self: flex-start;
             white-space: nowrap;
-            font-size: 0.78em;
-            font-weight: 600;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            padding: 5px 12px;
-            border-radius: 999px;
-            color: #e0f2fe;
-            background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(14, 165, 233, 0.14));
-            border: 1px solid rgba(56, 189, 248, 0.45);
-            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.08), 0 4px 14px rgba(2, 6, 23, 0.35);
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            color: #94a3b8;
+        }
+
+        .search-card-speed-icon {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            color: #38bdf8;
+            opacity: 0.92;
         }
         
         .search-box {
@@ -486,24 +506,41 @@
                 padding: 22px 18px;
             }
 
+            .container.container--tight-top {
+                padding-top: 11px;
+            }
+
             h2.page-title {
                 font-size: 1.15rem;
                 margin-bottom: 6px;
             }
 
+            .public-banner-outer {
+                margin-bottom: 12px;
+            }
+
             .public-banner {
-                margin-bottom: 14px;
                 padding: 10px 12px;
                 font-size: 0.82em;
             }
 
-            .public-banner-counter-row {
-                font-size: 0.78em;
+            .search-card-top-row {
                 gap: 8px;
+                margin-bottom: 10px;
             }
 
-            .public-banner-counter-right {
-                font-size: 0.95em;
+            .search-card-counter {
+                font-size: 0.78rem;
+            }
+
+            .search-card-speed {
+                font-size: 0.72rem;
+                gap: 5px;
+            }
+
+            .search-card-speed-icon {
+                width: 13px;
+                height: 13px;
             }
 
             .example {
@@ -964,28 +1001,36 @@
     {% if not show_public_banner %}
     <p class="subscriber-greet" aria-label="Usuario en sesión">Hola, {{ current_user.username }}.</p>
     {% endif %}
-    <div class="container">
-        <h2 class="page-title">Búsqueda NAGS</h2>
-
-        {% if show_public_banner %}
+    {% if show_public_banner %}
+    <div class="public-banner-outer">
         <div class="public-banner">
-            Versión Gratis permite solo 3 búsquedas diarias en catálogo 2025. Para tener acceso a todos los catálogos
+            Versión Gratis permite solo 3 búsquedas diarias en catálogo 2025. Para tener acceso a todos los catálogos y búsquedas ilimitadas,
             <a href="#" class="js-open-register">regístrate aquí</a>.
-            <div class="public-banner-counter-row" aria-live="polite">
-                <span class="public-banner-counter-left" id="freeSearchCounterText">
-                    {%- if free_remaining_searches == 1 -%}
-                    Última búsqueda gratuita
-                    {%- elif free_remaining_searches == 0 -%}
-                    Sin búsquedas gratuitas hoy.
-                    {%- else -%}
-                    Te quedan {{ free_remaining_searches }} de {{ free_daily_limit }} búsquedas hoy.
-                    {%- endif -%}
-                </span>
-                <span class="public-banner-counter-right">Resultados en segundos</span>
-            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="container{% if show_public_banner %} container--tight-top{% endif %}">
+        {% if show_public_banner %}
+        <div class="search-card-top-row" aria-live="polite">
+            <span class="search-card-counter" id="freeSearchCounterText">
+                {%- if free_remaining_searches == 1 -%}
+                Última búsqueda gratuita
+                {%- elif free_remaining_searches == 0 -%}
+                Sin búsquedas gratuitas hoy.
+                {%- else -%}
+                Te quedan {{ free_remaining_searches }} de {{ free_daily_limit }} búsquedas hoy.
+                {%- endif -%}
+            </span>
+            <span class="search-card-speed">
+                <svg class="search-card-speed-icon" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/>
+                </svg>
+                Resultados en segundos
+            </span>
         </div>
         {% endif %}
-        
+        <h2 class="page-title">Búsqueda NAGS</h2>
+
         <div class="search-box">
             <input 
                 type="text" 
