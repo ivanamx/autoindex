@@ -518,6 +518,9 @@
     <span class="brand">{{ site_name }}</span>
     <nav aria-label="Navegación">
       <a href="{{ url_for('index') }}">Búsqueda</a>
+      {% if current_user.is_authenticated and current_user.is_admin %}
+      <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+      {% endif %}
       <a href="{{ url_for('logout') }}">Salir</a>
     </nav>
   </header>

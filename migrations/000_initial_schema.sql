@@ -21,8 +21,10 @@ CREATE TABLE IF NOT EXISTS users (
     password_reset_token_hash VARCHAR(255),
     password_reset_expires_at TIMESTAMP,
     password_reset_used_at TIMESTAMP,
+    role VARCHAR(20) NOT NULL DEFAULT 'user',
     CONSTRAINT users_username_unique UNIQUE (username),
-    CONSTRAINT users_email_unique UNIQUE (email)
+    CONSTRAINT users_email_unique UNIQUE (email),
+    CONSTRAINT users_role_check CHECK (role IN ('user', 'admin'))
 );
 
 CREATE TABLE IF NOT EXISTS catalogos (

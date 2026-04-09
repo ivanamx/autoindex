@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administración · {{ site_name }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='icons/favicon.ico') }}" sizes="any">
+  <meta name="theme-color" content="#020617">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { height: 100%; scroll-behavior: smooth; }
+
+    body.admin-app {
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100%;
+      min-height: 100dvh;
+      color: #e5e7eb;
+      background-color: #020617;
+      background-image:
+        radial-gradient(ellipse 120% 80% at 50% -30%, rgba(56, 189, 248, 0.12), transparent 50%),
+        radial-gradient(circle at top, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.96)),
+        url("{{ url_for('static', filename='images/index-bg.jpg') }}");
+      background-size: auto, cover, cover;
+      background-position: center, center, center;
+      background-attachment: fixed, fixed, fixed;
+      background-repeat: no-repeat;
+      padding: 72px 18px 40px;
+    }
+
+    .admin-noise {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      z-index: 0;
+    }
+
+    .admin-grid-lines {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black, transparent);
+      z-index: 0;
+    }
+
+    .admin-shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    @keyframes admin-fade-up {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes admin-shimmer {
+      0% { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+
+    @keyframes admin-glow-pulse {
+      0%, 100% { opacity: 0.45; }
+      50% { opacity: 0.85; }
+    }
+
+    .admin-hero {
+      margin-bottom: 28px;
+      animation: admin-fade-up 0.65s ease-out both;
+    }
+
+    .admin-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #7dd3fc;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(14, 165, 233, 0.1));
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      margin-bottom: 14px;
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.15);
+    }
+
+    .admin-hero-badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 12px #38bdf8;
+      animation: admin-glow-pulse 2.2s ease-in-out infinite;
+    }
+
+    .admin-hero h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 10px;
+      background: linear-gradient(120deg, #f8fafc 0%, #e2e8f0 40%, #38bdf8 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: admin-shimmer 8s ease-in-out infinite alternate;
+    }
+
+    .admin-hero p {
+      font-size: 0.95rem;
+      color: #94a3b8;
+      max-width: 520px;
+      line-height: 1.55;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    @media (min-width: 640px) {
+      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (min-width: 960px) {
+      .kpi-grid { grid-template-columns: repeat(6, 1fr); }
+    }
+
+    .kpi-card {
+      position: relative;
+      padding: 18px 16px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.35s ease,
+        box-shadow 0.35s ease;
+      animation: admin-fade-up 0.55s ease-out both;
+    }
+
+    .kpi-card:nth-child(1) { animation-delay: 0.06s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.1s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.14s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.18s; }
+    .kpi-card:nth-child(5) { animation-delay: 0.22s; }
+    .kpi-card:nth-child(6) { animation-delay: 0.26s; }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.6), transparent);
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(56, 189, 248, 0.28);
+      box-shadow:
+        0 16px 40px rgba(0, 0, 0, 0.45),
+        0 0 0 1px rgba(56, 189, 248, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .kpi-card:hover::before { opacity: 1; }
+
+    .kpi-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      background: linear-gradient(145deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.08));
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #7dd3fc;
+    }
+
+    .kpi-icon svg { width: 18px; height: 18px; }
+
+    .kpi-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+
+    .kpi-value {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      letter-spacing: -0.02em;
+    }
+
+    .kpi-hint {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 6px;
+    }
+
+    .admin-panels {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    @media (min-width: 900px) {
+      .admin-panels {
+        grid-template-columns: 1.2fr 1fr;
+        align-items: stretch;
+      }
+    }
+
+    .admin-panel {
+      border-radius: 20px;
+      padding: 22px 22px 24px;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      animation: admin-fade-up 0.65s ease-out 0.2s both;
+    }
+
+    .admin-panel h2 {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .admin-panel h2 span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
+    }
+
+    .chart-placeholder {
+      height: 200px;
+      border-radius: 14px;
+      border: 1px dashed rgba(148, 163, 184, 0.25);
+      background: linear-gradient(165deg, rgba(2, 6, 23, 0.45), rgba(15, 23, 42, 0.35));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #64748b;
+      font-size: 0.85rem;
+      transition: border-color 0.3s ease, background 0.3s ease;
+    }
+
+    .chart-placeholder:hover {
+      border-color: rgba(56, 189, 248, 0.28);
+      background: linear-gradient(165deg, rgba(2, 6, 23, 0.55), rgba(15, 23, 42, 0.45));
+    }
+
+    .chart-placeholder svg { opacity: 0.45; }
+
+    .chart-placeholder .sub,
+    .map-placeholder .sub {
+      color: #64748b;
+      font-size: 0.78rem;
+    }
+
+    .map-placeholder {
+      min-height: 220px;
+      border-radius: 14px;
+      border: 1px dashed rgba(148, 163, 184, 0.25);
+      background:
+        radial-gradient(ellipse 80% 70% at 50% 100%, rgba(56, 189, 248, 0.12), transparent),
+        linear-gradient(165deg, rgba(2, 6, 23, 0.45), rgba(15, 23, 42, 0.35));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #64748b;
+      font-size: 0.85rem;
+      transition: border-color 0.3s ease;
+    }
+
+    .map-placeholder:hover {
+      border-color: rgba(56, 189, 248, 0.28);
+    }
+
+    .top-cities {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .top-cities li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.88rem;
+      transition: transform 0.25s ease, border-color 0.25s ease;
+    }
+
+    .top-cities li:hover {
+      transform: translateX(4px);
+      border-color: rgba(56, 189, 248, 0.15);
+    }
+
+    .top-cities .rank {
+      font-weight: 700;
+      color: #38bdf8;
+      width: 28px;
+    }
+
+    .top-cities .city { color: #cbd5e1; }
+    .top-cities .muted { color: #64748b; font-size: 0.8rem; }
+
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 18px;
+      background: rgba(2, 6, 23, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      z-index: 100;
+    }
+
+    .brand {
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.12em;
+      color: #38bdf8;
+    }
+
+    .topbar nav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .topbar nav a {
+      color: #9ca3af;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 8px 12px;
+      border-radius: 10px;
+      transition: color 0.2s ease, background 0.2s ease;
+    }
+    .topbar nav a:hover {
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    @media (min-width: 520px) {
+      .topbar nav a { padding: 8px 14px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .admin-hero h1 { animation: none; background: linear-gradient(120deg, #f8fafc, #38bdf8); -webkit-background-clip: text; background-clip: text; }
+    }
+  </style>
+</head>
+<body class="admin-app">
+  <div class="admin-noise" aria-hidden="true"></div>
+  <div class="admin-grid-lines" aria-hidden="true"></div>
+
+  <header class="topbar" role="banner">
+    <span class="brand">{{ site_name }}</span>
+    <nav aria-label="Navegación">
+      <a href="{{ url_for('index') }}">Inicio</a>
+      <a href="{{ url_for('dashboard') }}">Panel</a>
+      <a href="{{ url_for('logout') }}">Salir</a>
+    </nav>
+  </header>
+
+  <div class="admin-shell">
+    <header class="admin-hero">
+      <div class="admin-hero-badge">
+        <span class="admin-hero-badge-dot" aria-hidden="true"></span>
+        Panel de control
+      </div>
+      <h1>Dashboard de administración</h1>
+      <p>Vista previa del panel de métricas. Los datos reales se conectarán a la base de datos y a Stripe en el siguiente paso.</p>
+    </header>
+
+    <section class="kpi-grid" aria-label="Indicadores">
+      <article class="kpi-card">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="kpi-label">Visitas</div>
+        <div class="kpi-value">—</div>
+        <div class="kpi-hint">Por período</div>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </div>
+        <div class="kpi-label">Búsquedas</div>
+        <div class="kpi-value">—</div>
+        <div class="kpi-hint">Total registradas</div>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </div>
+        <div class="kpi-label">Ventas hoy</div>
+        <div class="kpi-value">—</div>
+        <div class="kpi-hint">MXN</div>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>
+        </div>
+        <div class="kpi-label">Semana</div>
+        <div class="kpi-value">—</div>
+        <div class="kpi-hint">Ventas</div>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+        </div>
+        <div class="kpi-label">Mes</div>
+        <div class="kpi-value">—</div>
+        <div class="kpi-hint">Ventas</div>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="kpi-label">Ciudades</div>
+        <div class="kpi-value">—</div>
+        <div class="kpi-hint">Top suscriptores</div>
+      </article>
+    </section>
+
+    <div class="admin-panels">
+      <section class="admin-panel" aria-labelledby="chart-heading">
+        <h2 id="chart-heading"><span aria-hidden="true"></span> Actividad y ventas</h2>
+        <div class="chart-placeholder">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 6-6"/>
+          </svg>
+          <span>Gráficos de series temporales</span>
+          <span class="sub">Conecta datos para visualizar tendencias</span>
+        </div>
+      </section>
+
+      <section class="admin-panel" aria-labelledby="cities-heading">
+        <h2 id="cities-heading"><span aria-hidden="true"></span> Top ciudades</h2>
+        <ul class="top-cities">
+          <li><span class="rank">1</span> <span class="city">—</span> <span class="muted">—</span></li>
+          <li><span class="rank">2</span> <span class="city">—</span> <span class="muted">—</span></li>
+          <li><span class="rank">3</span> <span class="city">—</span> <span class="muted">—</span></li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="admin-panel" aria-labelledby="map-heading">
+      <h2 id="map-heading"><span aria-hidden="true"></span> Mapa de suscriptores</h2>
+      <div class="map-placeholder">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        <span>Mapa interactivo</span>
+        <span class="sub">Marcadores por ciudad cuando haya datos geolocalizados</span>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

@@ -1021,6 +1021,10 @@
         <span class="public-topbar-brand">AutoIndex</span>
         <nav class="public-topbar-nav" aria-label="Sesión">
             <a href="{{ url_for('dashboard') }}">Panel</a>
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <span class="sep" aria-hidden="true">|</span>
+            <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+            {% endif %}
             <span class="sep" aria-hidden="true">|</span>
             <a href="{{ url_for('logout') }}">Salir</a>
         </nav>

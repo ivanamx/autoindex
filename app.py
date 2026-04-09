@@ -14,6 +14,7 @@ from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 from typing import Optional
+from functools import wraps
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
@@ -54,13 +55,33 @@ FREE_DAILY_SEARCH_LIMIT = 3
 
 # === USER MODEL ===
 class User(UserMixin):
-    def __init__(self, id, username, email, password_hash, subscription_status, subscription_plan=None):
+    def __init__(self, id, username, email, password_hash, subscription_status, subscription_plan=None, role='user'):
         self.id = id
         self.username = username
         self.email = email
         self.password_hash = password_hash
         self.subscription_status = subscription_status
         self.subscription_plan = subscription_plan
+        self.role = role or 'user'
+
+    @property
+    def is_admin(self) -> bool:
+        return getattr(self, 'role', 'user') == 'admin'
+
+
+def admin_required(view_func):
+    """Solo usuarios con users.role = admin (requiere sesión iniciada)."""
+
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for('login', next=request.path))
+        if not getattr(current_user, 'is_admin', False):
+            flash('No tienes permiso para acceder a esa sección.')
+            return redirect(url_for('index'))
+        return view_func(*args, **kwargs)
+
+    return wrapped
 
 
 @login_manager.user_loader
@@ -70,7 +91,8 @@ def load_user(user_id):
 
     cur.execute(
         """
-        SELECT id, username, email, password_hash, subscription_status, subscription_plan
+        SELECT id, username, email, password_hash, subscription_status, subscription_plan,
+               COALESCE(role, 'user') AS role
         FROM users WHERE id = %s
         """,
         (user_id,),
@@ -864,7 +886,8 @@ def _login_user_from_db_row_after_payment(uid: int):
     cur = conn.cursor()
     cur.execute(
         """
-        SELECT id, username, email, password_hash, subscription_status, subscription_plan
+        SELECT id, username, email, password_hash, subscription_status, subscription_plan,
+               COALESCE(role, 'user') AS role
         FROM users WHERE id = %s
         """,
         (uid,),
@@ -1498,6 +1521,13 @@ def dashboard():
     )
 
 
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    """Panel de administración (solo role = admin)."""
+    return render_template('admin.html')
+
+
 @app.route('/dashboard/perfil', methods=['POST'])
 @login_required
 def dashboard_update_profile():
@@ -1607,7 +1637,8 @@ def login():
 
         cur.execute(
             """
-            SELECT id, username, email, password_hash, subscription_status, subscription_plan
+            SELECT id, username, email, password_hash, subscription_status, subscription_plan,
+                   COALESCE(role, 'user') AS role
             FROM users WHERE email = %s OR username = %s
             """,
             (identifier, identifier),
@@ -1946,7 +1977,8 @@ def completar_cuenta():
                         conn.rollback()
                         cur.execute(
                             """
-                            SELECT id, username, email, password_hash, subscription_status, subscription_plan
+                            SELECT id, username, email, password_hash, subscription_status, subscription_plan,
+                                   COALESCE(role, 'user') AS role
                             FROM users WHERE id = %s
                             """,
                             (uid,),
