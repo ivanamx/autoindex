@@ -226,9 +226,18 @@ def _extract_terms_without_year(query_text: str):
         if token in STOPWORDS_SET:
             continue
         cleaned.append(token)
+    # No pegar todo el texto en un solo token si ya hay 2+ términos: evita "bmw"+"x6" → "bmwx6"
+    # (duplica marca+modelo, ensucia modelo/primary_terms y confunde FTS/LIKE).
     compact = _compact_token(query_text)
-    if len(compact) >= 3 and compact not in cleaned and compact not in STOPWORDS_SET:
-        cleaned.append(compact)
+    joined = "".join(cleaned)
+    if len(cleaned) < 2:
+        if (
+            len(compact) >= 3
+            and compact not in cleaned
+            and compact not in STOPWORDS_SET
+            and compact != joined
+        ):
+            cleaned.append(compact)
     return cleaned
 
 
@@ -1326,21 +1335,26 @@ def search():
         like_pattern = f"%{'%'.join(terms)}%"
         compact_terms = [_compact_token(t) for t in terms if _compact_token(t)]
         compact_terms = [t for t in compact_terms if len(t) >= 3]
+        compact_primary = [_compact_token(t) for t in primary_terms if _compact_token(t)]
+        compact_primary = [t for t in compact_primary if len(t) >= 3]
+        # Con marca + modelo: exigir señal del modelo (evita páginas solo-marca); LIKE en orden de tokens de modelo
+        primary_like_pattern = f"%{'%'.join(primary_terms)}%" if primary_terms else like_pattern
+        requires_model_match = len(terms) > 1 and bool(primary_terms)
 
         conn = get_db_connection()
         cur = conn.cursor()
         ranked_results = []
+        search_strategy = "hybrid_fts_trgm"
 
-        try:
-            # Query robusta: FTS + typo tolerance (trigram) + fallback parcial
-            cur.execute(
-                """
+        hybrid_sql_broad = """
                 WITH params AS (
                     SELECT
                         unaccent(lower(%s)) AS q_all,
                         unaccent(lower(%s)) AS q_primary,
                         %s::text[] AS terms,
-                        %s::text[] AS compact_terms
+                        %s::text[] AS compact_terms,
+                        %s::text[] AS primary_terms_arr,
+                        %s::text[] AS compact_primary
                 ),
                 ranked AS (
                     SELECT
@@ -1398,25 +1412,133 @@ def search():
                     score_primary,
                     score_trgm,
                     score_compact,
-                    (score_primary * 3.0 + score_all * 2.0 + score_trgm + score_compact * 2.0) AS final_score
+                    (score_primary * 6.0 + score_all * 1.0 + score_trgm * 0.6 + score_compact * 2.0) AS final_score
                 FROM ranked
                 ORDER BY final_score DESC, pagina ASC
                 LIMIT 5
-                """,
-                (all_terms_text, primary_terms_text, terms, compact_terms, catalogo, like_pattern),
-            )
-            ranked_results = cur.fetchall()
-            search_strategy = "hybrid_fts_trgm"
+                """
+
+        hybrid_sql_strict = """
+                WITH params AS (
+                    SELECT
+                        unaccent(lower(%s)) AS q_all,
+                        unaccent(lower(%s)) AS q_primary,
+                        %s::text[] AS terms,
+                        %s::text[] AS compact_terms,
+                        %s::text[] AS primary_terms_arr,
+                        %s::text[] AS compact_primary
+                ),
+                ranked AS (
+                    SELECT
+                        c.pagina,
+                        c.pdf_path,
+                        c.texto,
+                        ts_rank_cd(
+                            to_tsvector('simple', unaccent(lower(c.texto))),
+                            plainto_tsquery('simple', p.q_all)
+                        ) AS score_all,
+                        ts_rank_cd(
+                            to_tsvector('simple', unaccent(lower(c.texto))),
+                            plainto_tsquery('simple', p.q_primary)
+                        ) AS score_primary,
+                        GREATEST(
+                            similarity(unaccent(lower(c.texto)), p.q_all),
+                            COALESCE((
+                                SELECT MAX(word_similarity(t, unaccent(lower(c.texto))))
+                                FROM unnest(p.terms) AS t
+                            ), 0.0)
+                        ) AS score_trgm,
+                        CASE
+                            WHEN EXISTS (
+                                SELECT 1
+                                FROM unnest(p.compact_terms) AS ct
+                                WHERE regexp_replace(unaccent(lower(c.texto)), '[^a-z0-9]+', '', 'g') LIKE ('%%' || ct || '%%')
+                            ) THEN 1.0
+                            ELSE 0.0
+                        END AS score_compact
+                    FROM catalogos c
+                    CROSS JOIN params p
+                    WHERE c.catalogo_nombre = %s
+                    AND (
+                        to_tsvector('simple', unaccent(lower(c.texto))) @@ plainto_tsquery('simple', p.q_all)
+                        OR to_tsvector('simple', unaccent(lower(c.texto))) @@ plainto_tsquery('simple', p.q_primary)
+                        OR EXISTS (
+                            SELECT 1
+                            FROM unnest(p.terms) AS t
+                            WHERE word_similarity(t, unaccent(lower(c.texto))) >=
+                                CASE WHEN length(t) <= 3 THEN 0.70 ELSE 0.30 END
+                        )
+                        OR EXISTS (
+                            SELECT 1
+                            FROM unnest(p.compact_terms) AS ct
+                            WHERE regexp_replace(unaccent(lower(c.texto)), '[^a-z0-9]+', '', 'g') LIKE ('%%' || ct || '%%')
+                        )
+                        OR unaccent(lower(c.texto)) LIKE unaccent(lower(%s))
+                    )
+                    AND (
+                        (NULLIF(trim(p.q_primary), '') IS NOT NULL AND to_tsvector('simple', unaccent(lower(c.texto))) @@ plainto_tsquery('simple', p.q_primary))
+                        OR EXISTS (
+                            SELECT 1
+                            FROM unnest(p.primary_terms_arr) AS t
+                            WHERE length(t) >= 2
+                            AND word_similarity(t, unaccent(lower(c.texto))) >=
+                                CASE WHEN length(t) <= 3 THEN 0.70 ELSE 0.30 END
+                        )
+                        OR EXISTS (
+                            SELECT 1
+                            FROM unnest(p.compact_primary) AS ct
+                            WHERE length(ct) >= 3
+                            AND regexp_replace(unaccent(lower(c.texto)), '[^a-z0-9]+', '', 'g') LIKE ('%%' || ct || '%%')
+                        )
+                        OR unaccent(lower(c.texto)) LIKE unaccent(lower(%s))
+                    )
+                )
+                SELECT
+                    pagina,
+                    pdf_path,
+                    texto,
+                    score_all,
+                    score_primary,
+                    score_trgm,
+                    score_compact,
+                    (score_primary * 6.0 + score_all * 1.0 + score_trgm * 0.6 + score_compact * 2.0) AS final_score
+                FROM ranked
+                ORDER BY final_score DESC, pagina ASC
+                LIMIT 5
+                """
+
+        hybrid_params = (
+            all_terms_text,
+            primary_terms_text,
+            terms,
+            compact_terms,
+            primary_terms,
+            compact_primary,
+            catalogo,
+            like_pattern,
+        )
+
+        try:
+            if requires_model_match:
+                cur.execute(hybrid_sql_strict, hybrid_params + (primary_like_pattern,))
+                ranked_results = cur.fetchall()
+                if not ranked_results:
+                    cur.execute(hybrid_sql_broad, hybrid_params)
+                    ranked_results = cur.fetchall()
+                    search_strategy = "hybrid_fts_trgm_broad_fallback"
+            else:
+                cur.execute(hybrid_sql_broad, hybrid_params)
+                ranked_results = cur.fetchall()
         except psycopg2.errors.UndefinedFunction:
             conn.rollback()
-            # Fallback seguro si faltan extensiones (unaccent/pg_trgm)
-            cur.execute(
-                """
+            # Fallback sin unaccent/pg_trgm: mismo criterio marca+modelo estricto + ampliación
+            fts_fallback_broad = """
                 WITH params AS (
                     SELECT
                         lower(%s) AS q_all,
                         lower(%s) AS q_primary,
-                        %s::text[] AS compact_terms
+                        %s::text[] AS compact_terms,
+                        %s::text[] AS compact_primary
                 ),
                 ranked AS (
                     SELECT
@@ -1461,15 +1583,98 @@ def search():
                     score_primary,
                     score_compact,
                     0.0 AS score_trgm,
-                    (score_primary * 3.0 + score_all * 2.0 + score_compact * 2.0) AS final_score
+                    (score_primary * 6.0 + score_all * 1.0 + score_compact * 2.0) AS final_score
                 FROM ranked
                 ORDER BY final_score DESC, pagina ASC
                 LIMIT 5
-                """,
-                (all_terms_text, primary_terms_text, compact_terms, catalogo, like_pattern),
+                """
+            fts_fallback_strict = """
+                WITH params AS (
+                    SELECT
+                        lower(%s) AS q_all,
+                        lower(%s) AS q_primary,
+                        %s::text[] AS compact_terms,
+                        %s::text[] AS compact_primary
+                ),
+                ranked AS (
+                    SELECT
+                        c.pagina,
+                        c.pdf_path,
+                        c.texto,
+                        ts_rank_cd(
+                            to_tsvector('simple', lower(c.texto)),
+                            plainto_tsquery('simple', p.q_all)
+                        ) AS score_all,
+                        ts_rank_cd(
+                            to_tsvector('simple', lower(c.texto)),
+                            plainto_tsquery('simple', p.q_primary)
+                        ) AS score_primary,
+                        CASE
+                            WHEN EXISTS (
+                                SELECT 1
+                                FROM unnest(p.compact_terms) AS ct
+                                WHERE regexp_replace(lower(c.texto), '[^a-z0-9]+', '', 'g') LIKE ('%%' || ct || '%%')
+                            ) THEN 1.0
+                            ELSE 0.0
+                        END AS score_compact
+                    FROM catalogos c
+                    CROSS JOIN params p
+                    WHERE c.catalogo_nombre = %s
+                    AND (
+                        to_tsvector('simple', lower(c.texto)) @@ plainto_tsquery('simple', p.q_all)
+                        OR to_tsvector('simple', lower(c.texto)) @@ plainto_tsquery('simple', p.q_primary)
+                        OR EXISTS (
+                            SELECT 1
+                            FROM unnest(p.compact_terms) AS ct
+                            WHERE regexp_replace(lower(c.texto), '[^a-z0-9]+', '', 'g') LIKE ('%%' || ct || '%%')
+                        )
+                        OR lower(c.texto) LIKE lower(%s)
+                    )
+                    AND (
+                        (NULLIF(trim(p.q_primary), '') IS NOT NULL AND to_tsvector('simple', lower(c.texto)) @@ plainto_tsquery('simple', p.q_primary))
+                        OR EXISTS (
+                            SELECT 1
+                            FROM unnest(p.compact_primary) AS ct
+                            WHERE length(ct) >= 3
+                            AND regexp_replace(lower(c.texto), '[^a-z0-9]+', '', 'g') LIKE ('%%' || ct || '%%')
+                        )
+                        OR lower(c.texto) LIKE lower(%s)
+                    )
+                )
+                SELECT
+                    pagina,
+                    pdf_path,
+                    texto,
+                    score_all,
+                    score_primary,
+                    score_compact,
+                    0.0 AS score_trgm,
+                    (score_primary * 6.0 + score_all * 1.0 + score_compact * 2.0) AS final_score
+                FROM ranked
+                ORDER BY final_score DESC, pagina ASC
+                LIMIT 5
+                """
+            fts_fallback_params = (
+                all_terms_text,
+                primary_terms_text,
+                compact_terms,
+                compact_primary,
+                catalogo,
+                like_pattern,
             )
-            ranked_results = cur.fetchall()
-            search_strategy = "fts_fallback"
+            if requires_model_match:
+                cur.execute(fts_fallback_strict, fts_fallback_params + (primary_like_pattern,))
+                ranked_results = cur.fetchall()
+                if not ranked_results:
+                    cur.execute(fts_fallback_broad, fts_fallback_params)
+                    ranked_results = cur.fetchall()
+                    search_strategy = "fts_fallback_broad_fallback"
+                else:
+                    search_strategy = "fts_fallback"
+            else:
+                cur.execute(fts_fallback_broad, fts_fallback_params)
+                ranked_results = cur.fetchall()
+                search_strategy = "fts_fallback"
 
         cur.close()
         conn.close()

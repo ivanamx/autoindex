@@ -1097,8 +1097,8 @@
         <div class="example">
             <strong>Ejemplos de búsqueda:</strong><br>
             {% if show_public_banner %}
-            • Honda Civic 2025<br>
-            • Corolla 2025<br>
+            • Toyota Tacoma 2025<br>
+            • X6 2025<br>
             • Ford 2025<br>
             {% else %}
             • Honda Civic 2020<br>
@@ -1546,6 +1546,28 @@ async function performSearch() {
                 }
             });
 
+        })();
+
+        (function focusSearchInputOnLoad() {
+            if (!searchInput) return;
+            function shouldSkipFocus() {
+                var reg = document.getElementById('registerModal');
+                var lim = document.getElementById('limitReachedModal');
+                if (reg && reg.classList.contains('is-open')) return true;
+                if (lim && lim.classList.contains('is-open')) return true;
+                return false;
+            }
+            function tryFocus() {
+                if (shouldSkipFocus()) return;
+                try {
+                    searchInput.focus({ preventScroll: true });
+                } catch (e) {
+                    searchInput.focus();
+                }
+            }
+            requestAnimationFrame(function () {
+                requestAnimationFrame(tryFocus);
+            });
         })();
     </script>
 </body>
