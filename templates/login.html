@@ -16,13 +16,26 @@
       font-family: 'Inter', sans-serif;
     }
 
+    html {
+      height: 100%;
+    }
+
     body {
-      background: radial-gradient(circle at top, #0f172a, #020617);
+      background-color: #020617;
+      background-image:
+        radial-gradient(circle at top, rgba(15, 23, 42, 0.88), rgba(2, 6, 23, 0.94)),
+        url("{{ url_for('static', filename='images/index-bg.jpg') }}");
+      background-size: cover, cover;
+      background-position: center, center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
       color: #e5e7eb;
-      height: 100vh;
+      min-height: 100%;
+      min-height: 100dvh;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 16px 20px;
     }
 
     .container {
