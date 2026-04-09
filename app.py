@@ -632,6 +632,112 @@ def _plan_label(plan: Optional[str]) -> str:
     return '—'
 
 
+def _fmt_admin_ts(dt) -> str:
+    if not dt:
+        return '—'
+    try:
+        return dt.astimezone(timezone.utc).strftime('%d/%m/%Y %H:%M UTC')
+    except Exception:
+        return str(dt)
+
+
+def _fetch_admin_stats():
+    """
+    Métricas desde PostgreSQL. No incluye visitas web ni búsquedas por término
+    (habría que registrar eventos en BD o usar analytics externo).
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute('SELECT COUNT(*) FROM users')
+        users_total = cur.fetchone()[0]
+        cur.execute(
+            "SELECT COUNT(*) FROM users WHERE subscription_status = %s",
+            ('active',),
+        )
+        users_active = cur.fetchone()[0]
+        cur.execute(
+            """
+            SELECT subscription_status, COUNT(*)
+            FROM users
+            GROUP BY subscription_status
+            ORDER BY COUNT(*) DESC, subscription_status
+            """
+        )
+        by_status = cur.fetchall()
+        cur.execute(
+            """
+            SELECT subscription_plan, COUNT(*)
+            FROM users
+            GROUP BY subscription_plan
+            ORDER BY COUNT(*) DESC
+            """
+        )
+        by_plan = cur.fetchall()
+        cur.execute('SELECT COUNT(*) FROM user_sessions')
+        sessions_total = cur.fetchone()[0]
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM user_sessions
+            WHERE last_seen_at >= (NOW() - INTERVAL '7 days')
+            """
+        )
+        sessions_week = cur.fetchone()[0]
+        cur.execute('SELECT COUNT(*) FROM catalogos')
+        catalog_pages = cur.fetchone()[0]
+        cur.execute('SELECT COUNT(DISTINCT catalogo_nombre) FROM catalogos')
+        catalog_files = cur.fetchone()[0]
+        cur.execute(
+            """
+            SELECT catalogo_nombre, COUNT(*) AS n
+            FROM catalogos
+            GROUP BY catalogo_nombre
+            ORDER BY n DESC
+            LIMIT 5
+            """
+        )
+        top_catalogos = cur.fetchall()
+        cur.execute(
+            """
+            SELECT u.username, s.last_seen_at, s.user_agent
+            FROM user_sessions s
+            JOIN users u ON u.id = s.user_id
+            ORDER BY s.last_seen_at DESC NULLS LAST
+            LIMIT 8
+            """
+        )
+        recent_rows = cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+    recent_sessions = []
+    for username, last_seen, ua in recent_rows:
+        ua_short = (ua or '').strip()
+        if len(ua_short) > 120:
+            ua_short = ua_short[:120] + '…'
+        recent_sessions.append(
+            {
+                'username': username,
+                'last_seen': _fmt_admin_ts(last_seen),
+                'user_agent': ua_short or '—',
+            }
+        )
+
+    return {
+        'users_total': users_total,
+        'users_active': users_active,
+        'by_status': by_status,
+        'by_plan': by_plan,
+        'sessions_total': sessions_total,
+        'sessions_week': sessions_week,
+        'catalog_pages': catalog_pages,
+        'catalog_files': catalog_files,
+        'top_catalogos': top_catalogos,
+        'recent_sessions': recent_sessions,
+    }
+
+
 def _stripe_price_to_plan(price_id: Optional[str]) -> Optional[str]:
     if not price_id:
         return None
@@ -1531,7 +1637,8 @@ def dashboard():
 @admin_required
 def admin_dashboard():
     """Panel de administración (solo role = admin)."""
-    return render_template('admin.html')
+    stats = _fetch_admin_stats()
+    return render_template('admin.html', admin_stats=stats)
 
 
 @app.route('/dashboard/perfil', methods=['POST'])

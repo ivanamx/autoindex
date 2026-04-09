@@ -351,6 +351,58 @@
     .top-cities .city { color: #cbd5e1; }
     .top-cities .muted { color: #64748b; font-size: 0.8rem; }
 
+    .breakdown-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .breakdown-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 12px;
+      align-items: center;
+    }
+
+    .breakdown-label { font-size: 0.85rem; color: #cbd5e1; word-break: break-word; }
+    .breakdown-count { font-size: 0.85rem; font-weight: 600; color: #e2e8f0; }
+
+    .breakdown-track {
+      grid-column: 1 / -1;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+
+    .breakdown-fill {
+      height: 100%;
+      min-width: 2px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+      transition: width 0.45s ease;
+    }
+
+    .plan-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.88rem;
+    }
+
+    .plan-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: #cbd5e1;
+    }
+
+    .plan-row span:last-child { font-weight: 600; color: #e2e8f0; }
+
     .topbar {
       position: fixed;
       top: 0;
@@ -427,7 +479,10 @@
         Panel de control
       </div>
       <h1>Dashboard de administración</h1>
-      <p>Vista previa del panel de métricas. Los datos reales se conectarán a la base de datos y a Stripe en el siguiente paso.</p>
+      <p>
+        Métricas desde PostgreSQL (usuarios, sesiones de dispositivo, índice de búsqueda).
+        Ingresos y series de ventas requieren la API de Stripe o registro de pagos; visitas y búsquedas por término requieren analytics o una tabla de eventos.
+      </p>
     </header>
 
     <section class="kpi-grid" aria-label="Indicadores">
@@ -435,82 +490,133 @@
         <div class="kpi-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
-        <div class="kpi-label">Visitas</div>
-        <div class="kpi-value">—</div>
-        <div class="kpi-hint">Por período</div>
+        <div class="kpi-label">Usuarios</div>
+        <div class="kpi-value">{{ admin_stats.users_total }}</div>
+        <div class="kpi-hint">Registrados</div>
       </article>
       <article class="kpi-card">
         <div class="kpi-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
-        <div class="kpi-label">Búsquedas</div>
-        <div class="kpi-value">—</div>
-        <div class="kpi-hint">Total registradas</div>
+        <div class="kpi-label">Suscripciones</div>
+        <div class="kpi-value">{{ admin_stats.users_active }}</div>
+        <div class="kpi-hint">Estado activo</div>
       </article>
       <article class="kpi-card">
         <div class="kpi-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
         </div>
-        <div class="kpi-label">Ventas hoy</div>
-        <div class="kpi-value">—</div>
-        <div class="kpi-hint">MXN</div>
+        <div class="kpi-label">Sesiones</div>
+        <div class="kpi-value">{{ admin_stats.sessions_total }}</div>
+        <div class="kpi-hint">Dispositivos guardados</div>
       </article>
       <article class="kpi-card">
         <div class="kpi-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </div>
-        <div class="kpi-label">Semana</div>
-        <div class="kpi-value">—</div>
-        <div class="kpi-hint">Ventas</div>
+        <div class="kpi-label">Actividad 7 días</div>
+        <div class="kpi-value">{{ admin_stats.sessions_week }}</div>
+        <div class="kpi-hint">Sesiones con uso reciente</div>
       </article>
       <article class="kpi-card">
         <div class="kpi-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
         </div>
-        <div class="kpi-label">Mes</div>
-        <div class="kpi-value">—</div>
-        <div class="kpi-hint">Ventas</div>
+        <div class="kpi-label">Páginas índice</div>
+        <div class="kpi-value">{{ admin_stats.catalog_pages }}</div>
+        <div class="kpi-hint">Filas en catalogos</div>
       </article>
       <article class="kpi-card">
         <div class="kpi-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         </div>
-        <div class="kpi-label">Ciudades</div>
-        <div class="kpi-value">—</div>
-        <div class="kpi-hint">Top suscriptores</div>
+        <div class="kpi-label">PDFs</div>
+        <div class="kpi-value">{{ admin_stats.catalog_files }}</div>
+        <div class="kpi-hint">Catálogos distintos</div>
       </article>
     </section>
 
     <div class="admin-panels">
       <section class="admin-panel" aria-labelledby="chart-heading">
-        <h2 id="chart-heading"><span aria-hidden="true"></span> Actividad y ventas</h2>
-        <div class="chart-placeholder">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-            <path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 6-6"/>
-          </svg>
-          <span>Gráficos de series temporales</span>
-          <span class="sub">Conecta datos para visualizar tendencias</span>
+        <h2 id="chart-heading"><span aria-hidden="true"></span> Usuarios por estado</h2>
+        {% if admin_stats.by_status %}
+        <div class="breakdown-list">
+          {% for status, n in admin_stats.by_status %}
+          {% set pct = ((n / admin_stats.users_total * 100) | round(1)) if admin_stats.users_total else 0 %}
+          <div class="breakdown-row">
+            <span class="breakdown-label">{{ status }}</span>
+            <span class="breakdown-count">{{ n }}</span>
+            <div class="breakdown-track" role="presentation">
+              <div class="breakdown-fill" style="width: {{ pct }}%;"></div>
+            </div>
+          </div>
+          {% endfor %}
         </div>
+        {% else %}
+        <div class="chart-placeholder" style="min-height: 120px;">
+          <span>Sin usuarios en la base</span>
+        </div>
+        {% endif %}
       </section>
 
-      <section class="admin-panel" aria-labelledby="cities-heading">
-        <h2 id="cities-heading"><span aria-hidden="true"></span> Top ciudades</h2>
+      <section class="admin-panel" aria-labelledby="recent-heading">
+        <h2 id="recent-heading"><span aria-hidden="true"></span> Actividad reciente</h2>
+        {% if admin_stats.recent_sessions %}
         <ul class="top-cities">
-          <li><span class="rank">1</span> <span class="city">—</span> <span class="muted">—</span></li>
-          <li><span class="rank">2</span> <span class="city">—</span> <span class="muted">—</span></li>
-          <li><span class="rank">3</span> <span class="city">—</span> <span class="muted">—</span></li>
+          {% for row in admin_stats.recent_sessions %}
+          <li>
+            <span class="rank" style="width:auto; min-width:0; font-size:0.78rem; color:#94a3b8;">{{ row.last_seen }}</span>
+            <span class="city" style="flex:1; padding:0 8px;">{{ row.username }}</span>
+            <span class="muted" style="max-width:42%; text-align:right;">{{ row.user_agent }}</span>
+          </li>
+          {% endfor %}
         </ul>
+        {% else %}
+        <p style="color:#64748b; font-size:0.88rem;">Aún no hay sesiones de dispositivo registradas.</p>
+        {% endif %}
       </section>
     </div>
 
-    <section class="admin-panel" aria-labelledby="map-heading">
-      <h2 id="map-heading"><span aria-hidden="true"></span> Mapa de suscriptores</h2>
-      <div class="map-placeholder">
-        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-          <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-        </svg>
-        <span>Mapa interactivo</span>
-        <span class="sub">Marcadores por ciudad cuando haya datos geolocalizados</span>
+    <div class="admin-panels">
+      <section class="admin-panel" aria-labelledby="catalog-heading">
+        <h2 id="catalog-heading"><span aria-hidden="true"></span> Top catálogos (páginas)</h2>
+        {% if admin_stats.top_catalogos %}
+        <ul class="top-cities">
+          {% for name, n in admin_stats.top_catalogos %}
+          <li>
+            <span class="rank">{{ loop.index }}</span>
+            <span class="city" style="flex:1;">{{ name }}</span>
+            <span class="muted">{{ n }} págs.</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p style="color:#64748b; font-size:0.88rem;">No hay filas en la tabla <code style="color:#94a3b8;">catalogos</code>.</p>
+        {% endif %}
+      </section>
+
+      <section class="admin-panel" aria-labelledby="plan-heading">
+        <h2 id="plan-heading"><span aria-hidden="true"></span> Plan declarado</h2>
+        {% if admin_stats.by_plan %}
+        <div class="plan-rows">
+          {% for plan, n in admin_stats.by_plan %}
+          <div class="plan-row">
+            <span>{% if plan == 'monthly' %}Mensual{% elif plan == 'annual' %}Anual{% elif plan is none %}Sin plan{% else %}{{ plan }}{% endif %}</span>
+            <span>{{ n }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:#64748b; font-size:0.88rem;">Sin datos.</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <section class="admin-panel" aria-labelledby="stripe-heading">
+      <h2 id="stripe-heading"><span aria-hidden="true"></span> Ingresos y geografía</h2>
+      <div class="map-placeholder" style="min-height: 140px;">
+        <span>No implementado en servidor</span>
+        <span class="sub">Para ingresos (MXN/USD) usa el <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;">Dashboard de Stripe</a> o integra la API (Balance, Charges). Para mapa/ciudades hace falta guardar IP o ciudad en un evento de analytics.</span>
       </div>
     </section>
   </div>
